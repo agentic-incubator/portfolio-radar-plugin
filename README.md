@@ -58,6 +58,7 @@ Preview it with made-up data: `node plugins/portfolio-radar/scripts/build-dashbo
 - Your app's private key goes from GitHub straight into your repo's Actions secrets. It's never shown, logged or saved.
 - Buttons that change things use Anthropic's Claude GitHub app, open a PR and stop. Only "Ship it", pressed by you, merges, and only if the PR is unchanged and green.
 - Nothing is installed without your yes, and nothing is deleted unless you chose it.
+- To take a radar down (after a test run, or to demo setup again), follow [docs/teardown.md](docs/teardown.md). Deleting the repo doesn't delete the GitHub App.
 
 ## Branch cleanup (your choice)
 
