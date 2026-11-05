@@ -17,6 +17,8 @@ description: How the portfolio-radar mission-control dashboard works, its three 
 
 The page detects what it has at run time, so the same file serves every tier.
 
+The footer shows the credit line, the plugin version (`PLUGIN_VERSION` in `index.html`, bumped with the manifests) and the engine version from `data.json`'s `engine` (engine 0.4.0 and later). With an older engine it says the version isn't reported and suggests `/radar-update`.
+
 ## config.json
 
 ```json

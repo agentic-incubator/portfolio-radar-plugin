@@ -70,3 +70,12 @@ test("setup hands over the command when a step is refused", () => {
   assert.match(md, /chore: add hand-off rules/);
   assert.match(md, /user\/installations/);
 });
+
+test("dashboard footer carries the credit line and a plugin version that matches the manifests", () => {
+  const html = readFileSync(`${P}/dashboard/index.html`, "utf8");
+  assert.match(html, /<footer[^>]*>[\s\S]*Built with ❤️ by Chris Phillipson, Principal, CP Ventures Group, LLC/);
+  const v = html.match(/const PLUGIN_VERSION = "([^"]+)"/)?.[1];
+  assert.equal(v, JSON.parse(readFileSync(`${P}/.claude-plugin/plugin.json`, "utf8")).version);
+  assert.equal(v, JSON.parse(readFileSync(".claude-plugin/marketplace.json", "utf8")).plugins.find((p) => p.name === "portfolio-radar").version);
+  assert.match(html, /version not reported/, "a missing engine version is named, never blank");
+});
