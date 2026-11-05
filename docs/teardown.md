@@ -17,7 +17,7 @@ Deleting the repo removes the only copy of the key that the plugin made, so a le
 
 ## Steps
 
-Run these in order. Each one is safe to skip if that piece was never created.
+Run these in order. Each one is safe to skip if that piece was never created. If you might want the reports later, back up the repo first: `gh repo clone <owner>/portfolio-radar <folder> -- --mirror`.
 
 1. **Check you have the right one.** Make sure the owner, repo and app slug are the ones you mean. These steps can't be undone.
 
@@ -31,11 +31,11 @@ Run these in order. Each one is safe to skip if that piece was never created.
    - App owned by an org: `https://github.com/organizations/<org>/settings/apps/<slug>/advanced`
    - App owned by you: `https://github.com/settings/apps/<slug>/advanced`
 
-   Then click **Delete GitHub App**. This also uninstalls it everywhere and revokes all its keys. Its slug becomes free to use again.
+   Then click **Delete GitHub App**, after reading the name twice. This also uninstalls it everywhere and revokes all its keys. GitHub has no API for deleting an app, so this step is always in the browser. GitHub may not free the name straight away, so give a new test app a fresh name.
 
    If you'd rather keep the app and only stop it reading one account, uninstall it there instead: **Settings → GitHub Apps → Configure → Uninstall**.
 
-4. **Check it's gone.** `gh api user/installations --jq '.installations[].app_slug'` should no longer list the slug. `gh repo view <owner>/portfolio-radar` should say the repo can't be found.
+4. **Check it's gone.** For an org, `gh api orgs/<org>/installations --jq '.installations[].app_slug'` should no longer list the slug (for your own account, `gh api user/installations` with the same `--jq`). `gh repo view <owner>/portfolio-radar` should say the repo can't be found.
 
 5. **Clean up your computer.** These live only on your machine:
    - Any clone of the radar repo. Move it to the Trash.
