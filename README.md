@@ -25,9 +25,10 @@ The wizard takes about 20 minutes. It checks your machine and offers to install 
 | `/radar-add-owner` | Adds an account or org and gives you its install links |
 | `/radar-report` | Today's top moves, in plain words |
 | `/radar-update` | Brings the newest engine into your copy as a pull request |
-| `/radar-dashboard` | Publishes or refreshes the dashboard *(coming in the next release)* |
+| `/radar-dashboard` | Publishes or refreshes the dashboard: a private claude.ai artifact, or a single HTML file |
+| `/radar-actions` | Runs dashboard button requests: hand-offs, triage plans, approved steps, Ship it |
 
-Skills: `system-detect`, `github-app-manifest`, `radar-config`, `handoff-rules`. Agents: `radar-installer`, `repo-handoff`, `portfolio-analyst`. A session-start hook says one line if your radar needs attention, and stays quiet otherwise.
+Skills: `system-detect`, `github-app-manifest`, `radar-config`, `handoff-rules`, `dashboard`, `triage-plan`. Agents: `radar-installer`, `repo-handoff`, `portfolio-analyst`. A session-start hook says one line if your radar needs attention, and stays quiet otherwise.
 
 ## How it fits together
 
@@ -38,6 +39,18 @@ Skills: `system-detect`, `github-app-manifest`, `radar-config`, `handoff-rules`.
 | Your radar repo | **Private**, yours | Your config, daily reports and data |
 
 Your copy is made from the template, not forked: a fork of a public repo has to stay public, and your report lists your repo names. `/radar-update` pulls new engine versions into it as a pull request.
+
+## The dashboard
+
+A dark mission-control page: every repo as a dot on a radar scope (closer to the centre needs you sooner), vitals with 60-day sparklines, today's moves, and lanes for what needs you, what's ready to ship, one fix across many repos, bots, goals, clients, noise and drift. It comes in three forms, and `/radar-dashboard` picks the best one your account supports:
+
+| Form | Buttons |
+|---|---|
+| Private claude.ai artifact with scheduled tasks | Press a button and Claude runs it in the cloud |
+| Private claude.ai artifact | Buttons queue requests; `/radar-actions` runs them |
+| One HTML file on your computer | Buttons give you a line to paste into Claude Code |
+
+Preview it with made-up data: `node plugins/portfolio-radar/scripts/build-dashboard.mjs --out preview.html`, then open `preview.html`.
 
 ## Safety
 
