@@ -25,7 +25,7 @@ export function writeState(patch) {
 }
 
 // CLI: node state.mjs get | node state.mjs set '{"repo":"me/portfolio-radar"}'
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const [cmd, json] = process.argv.slice(2);
   if (cmd === "set") console.log(JSON.stringify(writeState(JSON.parse(json || "{}")), null, 2));
   else console.log(JSON.stringify(readState(), null, 2));

@@ -106,7 +106,7 @@ export function render({ repo, checks }) {
   return lines.join("\n");
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const argv = process.argv.slice(2);
   const i = argv.indexOf("--repo");
   const repo = i >= 0 ? argv[i + 1] : readState().repo;

@@ -90,7 +90,7 @@ export function pretty(d) {
   return lines.join("\n");
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const d = detect();
   console.log(process.argv.includes("--pretty") ? pretty(d) : JSON.stringify(d, null, 2));
 }

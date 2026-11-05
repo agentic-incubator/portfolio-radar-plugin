@@ -1,0 +1,1007 @@
+{
+ "schema": 1,
+ "generated": "2026-11-05T11:30:00Z",
+ "owner": "octo-user",
+ "staleDays": 90,
+ "totals": {
+  "repos": 8,
+  "private": 2,
+  "prs": 25,
+  "humanPrs": 3,
+  "botPrs": 22,
+  "issues": 24,
+  "alerts": 27,
+  "critHigh": 11,
+  "secrets": 1,
+  "failing": 1,
+  "noAgents": 2,
+  "stale": 1,
+  "noise": 1
+ },
+ "history": [
+  {
+   "repos": 8,
+   "private": 2,
+   "prs": 25,
+   "humanPrs": 3,
+   "botPrs": 20,
+   "issues": 24,
+   "alerts": 42,
+   "critHigh": 18,
+   "secrets": 1,
+   "failing": 1,
+   "noAgents": 2,
+   "stale": 1,
+   "noise": 1,
+   "date": "2026-10-06"
+  },
+  {
+   "repos": 8,
+   "private": 2,
+   "prs": 25,
+   "humanPrs": 3,
+   "botPrs": 24,
+   "issues": 24,
+   "alerts": 41,
+   "critHigh": 18,
+   "secrets": 1,
+   "failing": 1,
+   "noAgents": 2,
+   "stale": 1,
+   "noise": 1,
+   "date": "2026-10-07"
+  },
+  {
+   "repos": 8,
+   "private": 2,
+   "prs": 25,
+   "humanPrs": 3,
+   "botPrs": 23,
+   "issues": 24,
+   "alerts": 41,
+   "critHigh": 18,
+   "secrets": 1,
+   "failing": 1,
+   "noAgents": 2,
+   "stale": 1,
+   "noise": 1,
+   "date": "2026-10-08"
+  },
+  {
+   "repos": 8,
+   "private": 2,
+   "prs": 25,
+   "humanPrs": 3,
+   "botPrs": 22,
+   "issues": 24,
+   "alerts": 40,
+   "critHigh": 17,
+   "secrets": 1,
+   "failing": 1,
+   "noAgents": 2,
+   "stale": 1,
+   "noise": 1,
+   "date": "2026-10-09"
+  },
+  {
+   "repos": 8,
+   "private": 2,
+   "prs": 25,
+   "humanPrs": 3,
+   "botPrs": 21,
+   "issues": 24,
+   "alerts": 40,
+   "critHigh": 17,
+   "secrets": 1,
+   "failing": 1,
+   "noAgents": 2,
+   "stale": 1,
+   "noise": 1,
+   "date": "2026-10-10"
+  },
+  {
+   "repos": 8,
+   "private": 2,
+   "prs": 25,
+   "humanPrs": 3,
+   "botPrs": 20,
+   "issues": 24,
+   "alerts": 39,
+   "critHigh": 17,
+   "secrets": 1,
+   "failing": 1,
+   "noAgents": 2,
+   "stale": 1,
+   "noise": 1,
+   "date": "2026-10-11"
+  },
+  {
+   "repos": 8,
+   "private": 2,
+   "prs": 25,
+   "humanPrs": 3,
+   "botPrs": 24,
+   "issues": 24,
+   "alerts": 39,
+   "critHigh": 17,
+   "secrets": 1,
+   "failing": 1,
+   "noAgents": 2,
+   "stale": 1,
+   "noise": 1,
+   "date": "2026-10-12"
+  },
+  {
+   "repos": 8,
+   "private": 2,
+   "prs": 25,
+   "humanPrs": 3,
+   "botPrs": 23,
+   "issues": 24,
+   "alerts": 38,
+   "critHigh": 16,
+   "secrets": 1,
+   "failing": 1,
+   "noAgents": 2,
+   "stale": 1,
+   "noise": 1,
+   "date": "2026-10-13"
+  },
+  {
+   "repos": 8,
+   "private": 2,
+   "prs": 25,
+   "humanPrs": 3,
+   "botPrs": 22,
+   "issues": 24,
+   "alerts": 38,
+   "critHigh": 16,
+   "secrets": 1,
+   "failing": 1,
+   "noAgents": 2,
+   "stale": 1,
+   "noise": 1,
+   "date": "2026-10-14"
+  },
+  {
+   "repos": 8,
+   "private": 2,
+   "prs": 25,
+   "humanPrs": 3,
+   "botPrs": 21,
+   "issues": 24,
+   "alerts": 37,
+   "critHigh": 16,
+   "secrets": 1,
+   "failing": 1,
+   "noAgents": 2,
+   "stale": 1,
+   "noise": 1,
+   "date": "2026-10-15"
+  },
+  {
+   "repos": 8,
+   "private": 2,
+   "prs": 25,
+   "humanPrs": 3,
+   "botPrs": 20,
+   "issues": 24,
+   "alerts": 37,
+   "critHigh": 16,
+   "secrets": 1,
+   "failing": 1,
+   "noAgents": 2,
+   "stale": 1,
+   "noise": 1,
+   "date": "2026-10-16"
+  },
+  {
+   "repos": 8,
+   "private": 2,
+   "prs": 25,
+   "humanPrs": 3,
+   "botPrs": 24,
+   "issues": 24,
+   "alerts": 36,
+   "critHigh": 15,
+   "secrets": 1,
+   "failing": 1,
+   "noAgents": 2,
+   "stale": 1,
+   "noise": 1,
+   "date": "2026-10-17"
+  },
+  {
+   "repos": 8,
+   "private": 2,
+   "prs": 25,
+   "humanPrs": 3,
+   "botPrs": 23,
+   "issues": 24,
+   "alerts": 36,
+   "critHigh": 15,
+   "secrets": 1,
+   "failing": 1,
+   "noAgents": 2,
+   "stale": 1,
+   "noise": 1,
+   "date": "2026-10-18"
+  },
+  {
+   "repos": 8,
+   "private": 2,
+   "prs": 25,
+   "humanPrs": 3,
+   "botPrs": 22,
+   "issues": 24,
+   "alerts": 35,
+   "critHigh": 15,
+   "secrets": 1,
+   "failing": 1,
+   "noAgents": 2,
+   "stale": 1,
+   "noise": 1,
+   "date": "2026-10-19"
+  },
+  {
+   "repos": 8,
+   "private": 2,
+   "prs": 25,
+   "humanPrs": 3,
+   "botPrs": 21,
+   "issues": 24,
+   "alerts": 35,
+   "critHigh": 15,
+   "secrets": 1,
+   "failing": 1,
+   "noAgents": 2,
+   "stale": 1,
+   "noise": 1,
+   "date": "2026-10-20"
+  },
+  {
+   "repos": 8,
+   "private": 2,
+   "prs": 25,
+   "humanPrs": 3,
+   "botPrs": 20,
+   "issues": 24,
+   "alerts": 34,
+   "critHigh": 14,
+   "secrets": 1,
+   "failing": 1,
+   "noAgents": 2,
+   "stale": 1,
+   "noise": 1,
+   "date": "2026-10-21"
+  },
+  {
+   "repos": 8,
+   "private": 2,
+   "prs": 25,
+   "humanPrs": 3,
+   "botPrs": 24,
+   "issues": 24,
+   "alerts": 34,
+   "critHigh": 14,
+   "secrets": 1,
+   "failing": 1,
+   "noAgents": 2,
+   "stale": 1,
+   "noise": 1,
+   "date": "2026-10-22"
+  },
+  {
+   "repos": 8,
+   "private": 2,
+   "prs": 25,
+   "humanPrs": 3,
+   "botPrs": 23,
+   "issues": 24,
+   "alerts": 33,
+   "critHigh": 14,
+   "secrets": 1,
+   "failing": 1,
+   "noAgents": 2,
+   "stale": 1,
+   "noise": 1,
+   "date": "2026-10-23"
+  },
+  {
+   "repos": 8,
+   "private": 2,
+   "prs": 25,
+   "humanPrs": 3,
+   "botPrs": 22,
+   "issues": 24,
+   "alerts": 33,
+   "critHigh": 14,
+   "secrets": 1,
+   "failing": 1,
+   "noAgents": 2,
+   "stale": 1,
+   "noise": 1,
+   "date": "2026-10-24"
+  },
+  {
+   "repos": 8,
+   "private": 2,
+   "prs": 25,
+   "humanPrs": 3,
+   "botPrs": 21,
+   "issues": 24,
+   "alerts": 32,
+   "critHigh": 13,
+   "secrets": 1,
+   "failing": 1,
+   "noAgents": 2,
+   "stale": 1,
+   "noise": 1,
+   "date": "2026-10-25"
+  },
+  {
+   "repos": 8,
+   "private": 2,
+   "prs": 25,
+   "humanPrs": 3,
+   "botPrs": 20,
+   "issues": 24,
+   "alerts": 32,
+   "critHigh": 13,
+   "secrets": 1,
+   "failing": 1,
+   "noAgents": 2,
+   "stale": 1,
+   "noise": 1,
+   "date": "2026-10-26"
+  },
+  {
+   "repos": 8,
+   "private": 2,
+   "prs": 25,
+   "humanPrs": 3,
+   "botPrs": 24,
+   "issues": 24,
+   "alerts": 31,
+   "critHigh": 13,
+   "secrets": 1,
+   "failing": 1,
+   "noAgents": 2,
+   "stale": 1,
+   "noise": 1,
+   "date": "2026-10-27"
+  },
+  {
+   "repos": 8,
+   "private": 2,
+   "prs": 25,
+   "humanPrs": 3,
+   "botPrs": 23,
+   "issues": 24,
+   "alerts": 31,
+   "critHigh": 13,
+   "secrets": 1,
+   "failing": 1,
+   "noAgents": 2,
+   "stale": 1,
+   "noise": 1,
+   "date": "2026-10-28"
+  },
+  {
+   "repos": 8,
+   "private": 2,
+   "prs": 25,
+   "humanPrs": 3,
+   "botPrs": 22,
+   "issues": 24,
+   "alerts": 30,
+   "critHigh": 12,
+   "secrets": 1,
+   "failing": 1,
+   "noAgents": 2,
+   "stale": 1,
+   "noise": 1,
+   "date": "2026-10-29"
+  },
+  {
+   "repos": 8,
+   "private": 2,
+   "prs": 25,
+   "humanPrs": 3,
+   "botPrs": 21,
+   "issues": 24,
+   "alerts": 30,
+   "critHigh": 12,
+   "secrets": 1,
+   "failing": 1,
+   "noAgents": 2,
+   "stale": 1,
+   "noise": 1,
+   "date": "2026-10-30"
+  },
+  {
+   "repos": 8,
+   "private": 2,
+   "prs": 25,
+   "humanPrs": 3,
+   "botPrs": 20,
+   "issues": 24,
+   "alerts": 29,
+   "critHigh": 12,
+   "secrets": 1,
+   "failing": 1,
+   "noAgents": 2,
+   "stale": 1,
+   "noise": 1,
+   "date": "2026-10-31"
+  },
+  {
+   "repos": 8,
+   "private": 2,
+   "prs": 25,
+   "humanPrs": 3,
+   "botPrs": 24,
+   "issues": 24,
+   "alerts": 29,
+   "critHigh": 12,
+   "secrets": 1,
+   "failing": 1,
+   "noAgents": 2,
+   "stale": 1,
+   "noise": 1,
+   "date": "2026-11-01"
+  },
+  {
+   "repos": 8,
+   "private": 2,
+   "prs": 25,
+   "humanPrs": 3,
+   "botPrs": 23,
+   "issues": 24,
+   "alerts": 28,
+   "critHigh": 11,
+   "secrets": 1,
+   "failing": 1,
+   "noAgents": 2,
+   "stale": 1,
+   "noise": 1,
+   "date": "2026-11-02"
+  },
+  {
+   "repos": 8,
+   "private": 2,
+   "prs": 25,
+   "humanPrs": 3,
+   "botPrs": 22,
+   "issues": 24,
+   "alerts": 28,
+   "critHigh": 11,
+   "secrets": 1,
+   "failing": 1,
+   "noAgents": 2,
+   "stale": 1,
+   "noise": 1,
+   "date": "2026-11-03"
+  },
+  {
+   "repos": 8,
+   "private": 2,
+   "prs": 25,
+   "humanPrs": 3,
+   "botPrs": 21,
+   "issues": 24,
+   "alerts": 27,
+   "critHigh": 11,
+   "secrets": 1,
+   "failing": 1,
+   "noAgents": 2,
+   "stale": 1,
+   "noise": 1,
+   "date": "2026-11-04"
+  },
+  {
+   "repos": 8,
+   "private": 2,
+   "prs": 25,
+   "humanPrs": 3,
+   "botPrs": 20,
+   "issues": 24,
+   "alerts": 27,
+   "critHigh": 11,
+   "secrets": 1,
+   "failing": 1,
+   "noAgents": 2,
+   "stale": 1,
+   "noise": 1,
+   "date": "2026-11-05"
+  }
+ ],
+ "repos": [
+  {
+   "name": "web-shop",
+   "fullName": "octo-user/web-shop",
+   "owner": "octo-user",
+   "client": false,
+   "url": "https://github.com/octo-user/web-shop",
+   "private": false,
+   "description": "Sample repo web-shop",
+   "language": "TypeScript",
+   "pushedAt": "2026-11-05T11:30:00Z",
+   "staleDays": 0,
+   "readable": true,
+   "hasAgents": true,
+   "release": null,
+   "goals": [
+    "Launch (Dec 2026)"
+   ],
+   "score": 100,
+   "level": "secret",
+   "fresh": true,
+   "alerts": {
+    "secrets": [
+     "AWS access key"
+    ],
+    "critHigh": 3,
+    "total": 8,
+    "packages": [
+     "vite",
+     "undici"
+    ]
+   },
+   "failing": [],
+   "humanPrs": [],
+   "botPrs": {
+    "renovate": 0,
+    "dependabot": 0,
+    "other": 0
+   },
+   "issues": 3,
+   "updaters": {
+    "tools": [
+     "renovate"
+    ],
+    "configured": [
+     "renovate"
+    ],
+    "dashboard": "https://github.com/octo-user/web-shop/issues/1"
+   }
+  },
+  {
+   "name": "api-gateway",
+   "fullName": "octo-user/api-gateway",
+   "owner": "octo-user",
+   "client": false,
+   "url": "https://github.com/octo-user/api-gateway",
+   "private": false,
+   "description": "Sample repo api-gateway",
+   "language": "TypeScript",
+   "pushedAt": "2026-11-05T11:30:00Z",
+   "staleDays": 0,
+   "readable": true,
+   "hasAgents": true,
+   "release": null,
+   "goals": [],
+   "score": 88,
+   "level": "critical",
+   "fresh": true,
+   "alerts": {
+    "secrets": [],
+    "critHigh": 6,
+    "total": 14,
+    "packages": [
+     "vite",
+     "fast-uri"
+    ]
+   },
+   "failing": [],
+   "humanPrs": [],
+   "botPrs": {
+    "renovate": 0,
+    "dependabot": 7,
+    "other": 0
+   },
+   "issues": 3,
+   "updaters": {
+    "tools": [
+     "dependabot"
+    ],
+    "configured": [],
+    "dashboard": null
+   }
+  },
+  {
+   "name": "octo-org/data-pipeline",
+   "fullName": "octo-org/data-pipeline",
+   "owner": "octo-org",
+   "client": false,
+   "url": "https://github.com/octo-org/data-pipeline",
+   "private": false,
+   "description": "Sample repo data-pipeline",
+   "language": "Python",
+   "pushedAt": "2026-11-05T11:30:00Z",
+   "staleDays": 0,
+   "readable": true,
+   "hasAgents": true,
+   "release": null,
+   "goals": [],
+   "score": 70,
+   "level": "ci",
+   "fresh": true,
+   "alerts": {
+    "secrets": [],
+    "critHigh": 0,
+    "total": 0,
+    "packages": []
+   },
+   "failing": [
+    {
+     "name": "CI",
+     "url": "https://github.com/octo-org/data-pipeline/actions",
+     "at": "2026-11-03T11:30:00Z"
+    }
+   ],
+   "humanPrs": [
+    {
+     "number": 12,
+     "title": "feat: nightly export",
+     "url": "https://github.com/octo-org/data-pipeline/pull/12",
+     "draft": false,
+     "author": "octo-user",
+     "created": "2026-10-31T11:30:00Z",
+     "updated": "2026-11-04T11:30:00Z",
+     "headSha": "0000000000000000000000000000000000000002",
+     "checks": "red"
+    }
+   ],
+   "botPrs": {
+    "renovate": 2,
+    "dependabot": 0,
+    "other": 0
+   },
+   "issues": 3,
+   "updaters": {
+    "tools": [
+     "renovate"
+    ],
+    "configured": [
+     "renovate"
+    ],
+    "dashboard": "https://github.com/octo-org/data-pipeline/issues/1"
+   }
+  },
+  {
+   "name": "octo-org/docs-site",
+   "fullName": "octo-org/docs-site",
+   "owner": "octo-org",
+   "client": false,
+   "url": "https://github.com/octo-org/docs-site",
+   "private": false,
+   "description": "Sample repo docs-site",
+   "language": "TypeScript",
+   "pushedAt": "2026-11-05T11:30:00Z",
+   "staleDays": 0,
+   "readable": true,
+   "hasAgents": false,
+   "release": null,
+   "goals": [],
+   "score": 55,
+   "level": "prs",
+   "fresh": true,
+   "alerts": {
+    "secrets": [],
+    "critHigh": 0,
+    "total": 0,
+    "packages": []
+   },
+   "failing": [],
+   "humanPrs": [
+    {
+     "number": 41,
+     "title": "docs: getting started",
+     "url": "https://github.com/octo-org/docs-site/pull/41",
+     "draft": false,
+     "author": "octo-user",
+     "created": "2026-10-31T11:30:00Z",
+     "updated": "2026-11-04T11:30:00Z",
+     "headSha": "0000000000000000000000000000000000000001",
+     "checks": "green"
+    }
+   ],
+   "botPrs": {
+    "renovate": 1,
+    "dependabot": 3,
+    "other": 0
+   },
+   "issues": 3,
+   "updaters": {
+    "tools": [
+     "renovate",
+     "dependabot"
+    ],
+    "configured": [
+     "renovate"
+    ],
+    "dashboard": "https://github.com/octo-org/docs-site/issues/1"
+   }
+  },
+  {
+   "name": "cli-tool",
+   "fullName": "octo-user/cli-tool",
+   "owner": "octo-user",
+   "client": false,
+   "url": "https://github.com/octo-user/cli-tool",
+   "private": false,
+   "description": "Sample repo cli-tool",
+   "language": "Rust",
+   "pushedAt": "2026-11-05T11:30:00Z",
+   "staleDays": 0,
+   "readable": true,
+   "hasAgents": true,
+   "release": null,
+   "goals": [],
+   "score": 35,
+   "level": "drift",
+   "fresh": true,
+   "alerts": {
+    "secrets": [],
+    "critHigh": 0,
+    "total": 0,
+    "packages": []
+   },
+   "failing": [],
+   "humanPrs": [],
+   "botPrs": {
+    "renovate": 9,
+    "dependabot": 0,
+    "other": 0
+   },
+   "issues": 3,
+   "updaters": {
+    "tools": [
+     "renovate"
+    ],
+    "configured": [
+     "renovate"
+    ],
+    "dashboard": "https://github.com/octo-user/cli-tool/issues/1"
+   }
+  },
+  {
+   "name": "old-experiment",
+   "fullName": "octo-user/old-experiment",
+   "owner": "octo-user",
+   "client": false,
+   "url": "https://github.com/octo-user/old-experiment",
+   "private": false,
+   "description": "Sample repo old-experiment",
+   "language": "Go",
+   "pushedAt": "2026-04-09T11:30:00Z",
+   "staleDays": 210,
+   "readable": true,
+   "hasAgents": false,
+   "release": null,
+   "goals": [],
+   "score": 12,
+   "level": "stale",
+   "fresh": true,
+   "alerts": {
+    "secrets": [],
+    "critHigh": 0,
+    "total": 0,
+    "packages": []
+   },
+   "failing": [],
+   "humanPrs": [],
+   "botPrs": {
+    "renovate": 0,
+    "dependabot": 0,
+    "other": 0
+   },
+   "issues": 3,
+   "updaters": {
+    "tools": [],
+    "configured": [],
+    "dashboard": null
+   }
+  },
+  {
+   "name": "acme-client/portal",
+   "fullName": "acme-client/portal",
+   "owner": "acme-client",
+   "client": true,
+   "url": "https://github.com/acme-client/portal",
+   "private": true,
+   "description": "Sample repo portal",
+   "language": "TypeScript",
+   "pushedAt": "2026-11-05T11:30:00Z",
+   "staleDays": 0,
+   "readable": true,
+   "hasAgents": true,
+   "release": null,
+   "goals": [],
+   "score": 80,
+   "level": "critical",
+   "fresh": true,
+   "alerts": {
+    "secrets": [],
+    "critHigh": 2,
+    "total": 5,
+    "packages": [
+     "undici"
+    ]
+   },
+   "failing": [],
+   "humanPrs": [
+    {
+     "number": 7,
+     "title": "fix: login redirect",
+     "url": "https://github.com/acme-client/portal/pull/7",
+     "draft": false,
+     "author": "octo-user",
+     "created": "2026-10-31T11:30:00Z",
+     "updated": "2026-11-04T11:30:00Z",
+     "headSha": "0000000000000000000000000000000000000007",
+     "checks": "green"
+    }
+   ],
+   "botPrs": {
+    "renovate": 0,
+    "dependabot": 0,
+    "other": 0
+   },
+   "issues": 3,
+   "updaters": {
+    "tools": [
+     "renovate"
+    ],
+    "configured": [
+     "renovate"
+    ],
+    "dashboard": "https://github.com/acme-client/portal/issues/1"
+   }
+  },
+  {
+   "name": "acme-client/reports",
+   "fullName": "acme-client/reports",
+   "owner": "acme-client",
+   "client": true,
+   "url": "https://github.com/acme-client/reports",
+   "private": true,
+   "description": "Sample repo reports",
+   "language": "TypeScript",
+   "pushedAt": "2026-11-05T11:30:00Z",
+   "staleDays": 0,
+   "readable": true,
+   "hasAgents": true,
+   "release": null,
+   "goals": [],
+   "score": 5,
+   "level": "ok",
+   "fresh": false,
+   "alerts": {
+    "secrets": [],
+    "critHigh": 0,
+    "total": 0,
+    "packages": []
+   },
+   "failing": [],
+   "humanPrs": [],
+   "botPrs": {
+    "renovate": 0,
+    "dependabot": 0,
+    "other": 0
+   },
+   "issues": 3,
+   "updaters": {
+    "tools": [
+     "renovate"
+    ],
+    "configured": [
+     "renovate"
+    ],
+    "dashboard": "https://github.com/acme-client/reports/issues/1"
+   }
+  }
+ ],
+ "needs": [
+  "**web-shop**: exposed secret (AWS access key). Rotate it first. [alerts](https://github.com/octo-user/web-shop/security)",
+  "**api-gateway**: 6 critical/high security alert(s). [alerts](https://github.com/octo-user/api-gateway/security)",
+  "**octo-org/data-pipeline**: CI failing on main (CI). [run](https://github.com/octo-org/data-pipeline/actions)"
+ ],
+ "changed": [
+  "**octo-org/docs-site**: new PR #41 \"docs: getting started\". [link](https://github.com/octo-org/docs-site/pull/41)"
+ ],
+ "patterns": {
+  "packages": [
+   {
+    "pkg": "vite",
+    "ecosystem": "npm",
+    "repos": [
+     "web-shop",
+     "api-gateway"
+    ],
+    "worst": "high"
+   },
+   {
+    "pkg": "undici",
+    "ecosystem": "npm",
+    "repos": [
+     "web-shop",
+     "acme-client/portal"
+    ],
+    "worst": "high"
+   }
+  ]
+ },
+ "updaters": {
+  "renovate": [
+   "web-shop",
+   "octo-org/data-pipeline",
+   "cli-tool",
+   "acme-client/portal",
+   "acme-client/reports"
+  ],
+  "dependabot": [
+   "api-gateway"
+  ],
+  "both": [
+   "octo-org/docs-site"
+  ],
+  "none": [
+   "old-experiment"
+  ]
+ },
+ "goals": [
+  {
+   "goal": "Launch (Dec 2026)",
+   "repos": [
+    "web-shop"
+   ]
+  }
+ ],
+ "noise": [
+  {
+   "name": "forked-lib",
+   "fullName": "octo-user/forked-lib",
+   "kind": "fork",
+   "url": "https://github.com/octo-user/forked-lib",
+   "client": false,
+   "pushedAt": "2025-10-01T11:30:00Z",
+   "fork": {
+    "parent": "upstream/forked-lib",
+    "parentUrl": "https://github.com/upstream/forked-lib",
+    "ahead": 0,
+    "behind": 120
+   },
+   "signals": {
+    "alerts": 4,
+    "critHigh": 2,
+    "botPrs": 3,
+    "failing": 0,
+    "dependabotConfig": true,
+    "secrets": 0
+   },
+   "recommended": "silence-fork",
+   "options": [
+    {
+     "id": "silence-fork",
+     "kind": "silence",
+     "label": "Turn off alerts and Actions on the fork",
+     "effect": "Keeps the fork, stops its alerts and scheduled runs.",
+     "how": "gh api -X DELETE repos/octo-user/forked-lib/vulnerability-alerts"
+    },
+    {
+     "id": "promote",
+     "kind": "remediate",
+     "label": "Treat as an active repo",
+     "effect": "Adds it to activeForks in radar.config.json, so it gets the full report.",
+     "how": "radar.config.json: activeForks"
+    }
+   ]
+  }
+ ],
+ "projects": [],
+ "warnings": [
+  "Sample data: every name here is made up."
+ ]
+}
