@@ -21,7 +21,7 @@ The wizard takes about 20 minutes. It checks your machine and offers to install 
 | Command | What it does |
 |---|---|
 | `/radar-setup` | The guided setup. Safe to run again; it picks up where you stopped |
-| `/radar-doctor` | Checks tools, sign-in, your radar repo, secrets, the last run, dashboard freshness and engine version |
+| `/radar-doctor` | Checks tools, sign-in, your radar repo, secrets, app installs on each owner, hand-off rules, the last run, dashboard freshness and engine version |
 | `/radar-add-owner` | Adds an account or org and gives you its install links |
 | `/radar-report` | Today's top moves, in plain words |
 | `/radar-update` | Brings the newest engine into your copy as a pull request |
@@ -50,7 +50,7 @@ A dark mission-control page: every repo as a dot on a radar scope (closer to the
 | Private claude.ai artifact | Buttons queue requests; `/radar-actions` runs them |
 | One HTML file on your computer | Buttons give you a line to paste into Claude Code |
 
-Preview it with made-up data: `node plugins/portfolio-radar/scripts/build-dashboard.mjs --out preview.html`, then open `preview.html`.
+Preview it with made-up data: `node plugins/portfolio-radar/scripts/build-dashboard.mjs --out preview.html`, then open `preview.html`. Open it in Chrome, Safari, Edge or Firefox: some file previews show the page without running it, and it then says so instead of loading.
 
 ## Safety
 

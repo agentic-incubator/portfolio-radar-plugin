@@ -87,6 +87,7 @@ export function pretty(d) {
     `${d.tools.steward.found ? "green" : "grey "}  workstation-steward ${d.tools.steward.found ? d.tools.steward.version ?? "found" : "not found (optional)"}`,
   ];
   for (const [t, hint] of Object.entries(d.install)) lines.push(`       to install ${t}: ${hint}`);
+  lines.push(d.nextStep === "ready" ? "Ready: everything setup needs is here." : d.nextStep === "install" ? `Next: install ${d.missing.join(", ")}.` : "Next: sign in to GitHub with gh auth login.");
   return lines.join("\n");
 }
 

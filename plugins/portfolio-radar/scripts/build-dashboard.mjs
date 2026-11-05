@@ -27,6 +27,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   if (!out) { console.error("Usage: node build-dashboard.mjs [--data dashboard.json] [--config config.json] --out file.html"); process.exit(1); }
   const data = JSON.parse(readFileSync(arg("--data") || join(DASH, "sample-data.json"), "utf8"));
   const config = arg("--config") ? JSON.parse(readFileSync(arg("--config"), "utf8")) : {};
+  if (!arg("--config")) console.error("No --config given: the page uses defaults (no radar repo link, owner shown as \"you\", no steward, no Renovate preference). Pass --config config.json to set them.");
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, build(readFileSync(join(DASH, "index.html"), "utf8"), data, config));
   console.log(`Wrote ${out} (data from ${data.generated ?? "unknown time"})`);
