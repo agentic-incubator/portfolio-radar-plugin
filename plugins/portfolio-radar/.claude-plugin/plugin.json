@@ -1,0 +1,10 @@
+{
+  "name": "portfolio-radar",
+  "version": "0.1.0",
+  "description": "Guided setup for a daily, read-only GitHub portfolio report, dashboard and PR-opening action buttons that never merge on their own.",
+  "author": { "name": "Chris Phillipson, CP Ventures Group, LLC" },
+  "homepage": "https://github.com/agentic-incubator/portfolio-radar-plugin",
+  "repository": "https://github.com/agentic-incubator/portfolio-radar-plugin",
+  "license": "MIT",
+  "keywords": ["github", "portfolio", "dashboard", "report"]
+}
