@@ -12,13 +12,13 @@ Plugin files live under `${CLAUDE_PLUGIN_ROOT}`. Progress is saved with `node "$
 ## Rules for the whole wizard
 
 - **Nothing that writes happens without a yes on that step.** Creating a repo, setting a secret, installing a tool, starting a workflow: ask first, every time.
-- **Never delete anything.** If something is in the way (a repo or folder with the same name), stop and ask.
+- **Never delete anything**, except what the person chooses in the cleanup step. If something is in the way (a repo or folder with the same name), stop and ask.
 - **Never print, save or ask for a private key or token.** The app step stores the key straight into GitHub secrets. If the person pastes a key into the chat, tell them to rotate it (see the template's `docs/setup.md`, "Rotating the private key").
 - **Their radar repo must be private.** It lists their repo names, and client names if they add client orgs. Never offer a fork: a fork of a public repo has to stay public.
 - **Report gaps.** If a check fails or can't be read, say so plainly. Never guess that something worked.
 - Save progress after each step: `state.mjs set '{"steps":{"<step>":true}}'` merged with what's there (read, merge, write).
 
-Use the skills that come with this plugin: `system-detect`, `github-app-manifest`, `radar-config`, `handoff-rules`, and `dashboard`.
+Use the skills that come with this plugin: `system-detect`, `github-app-manifest`, `radar-config`, `handoff-rules`, `branch-cleanup` and `dashboard`.
 
 ## Steps
 
@@ -57,19 +57,23 @@ Save `{"appSlug":"<slug>","appId":<id>}` (the ID is not secret; the key is never
 ### 9. rules — how hand-offs behave
 Follow the `handoff-rules` skill. With workstation-steward detected: say hand-offs will follow its rules. Without it: write `handoff-rules.md` into their radar repo from the skill's default, and ask "Do you want hand-offs to prefer Renovate over Dependabot for updates?" Default **no**. Commit and push.
 
-### 10. run — the first report
+### 10. cleanup — merged branches, your choice
+Follow the `branch-cleanup` skill. Ask the two questions separately: **remote** (GitHub deletes a merged PR's branch: radar repo only, every repo they own, or no) and **local** (after Ship it, update their clone and remove the merged branch, only when it has no unsaved work). Both default to no. Show the plan before anything changes, and offer the optional permission snippets for fewer prompts.
+
+### 11. run — the first report
 On yes: `gh workflow run daily-radar.yml --repo <repo>`, then `gh run watch --repo <repo> --exit-status` (or poll `gh run list` every 30 seconds; don't sleep in long blocks). When done, pull and show the headline and the top 5 of "Needs you today" from `reports/latest.md`, and anything under "Couldn't check" with what to do about it.
 
-### 11. dashboard
+### 12. dashboard
 Run `/radar-dashboard`. It picks the best tier this account supports and sets up the morning refresh where it can.
 
-### 12. done
+### 13. done
 A short card: their radar repo, the app, which owners are covered and which are waiting, the dashboard link or file, and "Run `/radar-doctor` any time to check everything, and `/radar-update` to get new versions."
 
 ## No terminal path (Cowork or a chat without a computer)
 
-Do steps 3 to 5 and 9 here, since they're questions. For the rest, give click-by-click steps:
+Do steps 3 to 5, 9 and the cleanup questions in 10 here, since they're questions. For the rest, give click-by-click steps:
 - Repo: open https://github.com/agentic-incubator/portfolio-radar-template, **Use this template → Create a new repository**, choose **Private**.
 - App: follow the template's `docs/setup.md` sections 1 to 3. They paste the App ID into the secret page themselves and upload the key file straight to GitHub's secret page; never into the chat.
+- Remote cleanup: repo **Settings → General → Pull Requests → Automatically delete head branches**, for each repo they chose.
 - Config: give them the finished `radar.config.json` to paste into the GitHub editor.
 Offer to finish the rest in Claude Code later with `/radar-setup`, which will pick up from the saved steps there.

@@ -7,7 +7,7 @@
       "name": "portfolio-radar",
       "source": "./plugins/portfolio-radar",
       "description": "Guided setup for a daily, read-only GitHub portfolio report, dashboard and PR-opening action buttons that never merge on their own.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "license": "MIT",
       "keywords": ["github", "portfolio", "dashboard", "renovate", "security", "report"]
     }

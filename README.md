@@ -14,7 +14,7 @@ In Claude Code:
 /radar-setup
 ```
 
-The wizard takes about 20 minutes. It checks your machine and offers to install anything missing, makes your own **private** radar repo from [the template](https://github.com/agentic-incubator/portfolio-radar-template), creates a read-only GitHub App in one click, runs the first report and sets up the dashboard. It asks before every step that changes anything.
+The wizard takes about 20 minutes. It checks your machine and offers to install anything missing, makes your own **private** radar repo from [the template](https://github.com/agentic-incubator/portfolio-radar-template), creates a read-only GitHub App in one click, asks whether you want merged branches cleaned up, runs the first report and sets up the dashboard. It asks before every step that changes anything.
 
 ## Commands
 
@@ -28,7 +28,7 @@ The wizard takes about 20 minutes. It checks your machine and offers to install 
 | `/radar-dashboard` | Publishes or refreshes the dashboard: a private claude.ai artifact, or a single HTML file |
 | `/radar-actions` | Runs dashboard button requests: hand-offs, triage plans, approved steps, Ship it |
 
-Skills: `system-detect`, `github-app-manifest`, `radar-config`, `handoff-rules`, `dashboard`, `triage-plan`. Agents: `radar-installer`, `repo-handoff`, `portfolio-analyst`. A session-start hook says one line if your radar needs attention, and stays quiet otherwise.
+Skills: `system-detect`, `github-app-manifest`, `radar-config`, `handoff-rules`, `branch-cleanup`, `dashboard`, `triage-plan`. Agents: `radar-installer`, `repo-handoff`, `portfolio-analyst`. A session-start hook says one line if your radar needs attention, and stays quiet otherwise.
 
 ## How it fits together
 
@@ -57,7 +57,18 @@ Preview it with made-up data: `node plugins/portfolio-radar/scripts/build-dashbo
 - The radar's GitHub App is **read-only**. The plugin refuses to create it with any write permission.
 - Your app's private key goes from GitHub straight into your repo's Actions secrets. It's never shown, logged or saved.
 - Buttons that change things use Anthropic's Claude GitHub app, open a PR and stop. Only "Ship it", pressed by you, merges, and only if the PR is unchanged and green.
-- Nothing is deleted. Nothing is installed without your yes.
+- Nothing is installed without your yes, and nothing is deleted unless you chose it.
+
+## Branch cleanup (your choice)
+
+Setup asks two separate questions. Both default to no.
+
+| Choice | What happens |
+|---|---|
+| **Remote** | Turns on GitHub's "Automatically delete head branches" for your radar repo, or every repo you own. GitHub then removes a PR's branch once it merges. Client orgs are left alone |
+| **Local** | After Ship it, brings your clone up to date and removes the merged branch with `git branch -d` and any clean worktree for it. It stops if your clone has unsaved work, and never forces anything |
+
+`/radar-doctor` flags it if you chose remote cleanup and it's off. Change your mind any time with `/radar-setup cleanup`.
 
 ## With or without workstation-steward
 

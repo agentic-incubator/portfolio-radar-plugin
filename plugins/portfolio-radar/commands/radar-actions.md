@@ -26,7 +26,11 @@ Only for the dashboard's owner. Merge only if all hold right now:
 - the PR is open and not a draft, and its head SHA equals `headSha`,
 - every check run and status on that head is completed and successful,
 - it's mergeable.
-Then squash-merge with an explicit commit title and message (so no co-author trailer is added) and delete the PR's branch. If any check fails, stop and say which.
+Then squash-merge with an explicit commit title and message (so no co-author trailer is added). If any check fails, stop and say which.
+
+After the merge, follow the `branch-cleanup` skill:
+- **Remote branch.** If GitHub's auto-delete is on, it's already gone. Otherwise delete the PR's branch (never main, master, develop, trunk or release). If that fails, as it often does from a cloud session, say so in one line and give the person the `gh api -X DELETE` command.
+- **Local clone.** Only if they chose local cleanup (`state.mjs get` → `cleanup.local`), this machine has their clone of that repo, and it isn't a cloud session: run `cleanup.mjs local` with the PR's branch and head SHA, show the plan, and run it on yes. Report what was removed and what was kept and why.
 
 ## After
 Reply with one line per request: what happened and the PR link. If a request stopped, say why and what the person can do.

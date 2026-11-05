@@ -2,7 +2,7 @@
 
 ## Setup state
 
-The wizard saves progress in `~/.config/portfolio-radar/state.json` (`%APPDATA%\portfolio-radar` on Windows): the radar repo, its clone path, the app's slug and ID, and which steps are done. Never a key or token. `scripts/state.mjs` refuses key-like fields.
+The wizard saves progress in `~/.config/portfolio-radar/state.json` (`%APPDATA%\portfolio-radar` on Windows): the radar repo, its clone path, the app's slug and ID, the two cleanup choices (`cleanup.remote`, `cleanup.local`), and which steps are done. Never a key or token. `scripts/state.mjs` refuses key-like fields.
 
 ## Scripts
 
@@ -12,6 +12,7 @@ The wizard saves progress in `~/.config/portfolio-radar/state.json` (`%APPDATA%\
 | `app-manifest.mjs` | GitHub App manifest flow on 127.0.0.1, then `gh secret set` | Two Actions secrets on the radar repo |
 | `doctor.mjs` | Health checks via `gh` | Nothing |
 | `state.mjs` | Read and write setup state | The state file |
+| `cleanup.mjs` | Branch cleanup: turns on GitHub's auto-delete for chosen repos; after Ship it, fast-forwards the clone and removes the merged branch with `git branch -d` and clean worktrees. Dry run unless `--yes`; stops on unsaved work; never forces | Repo settings; the local clone |
 | `build-dashboard.mjs` | One self-contained dashboard HTML file, data and settings inline | The output file you name |
 
 ## Releases

@@ -38,7 +38,15 @@ export function compareVersions(a, b) {
   return 0;
 }
 
-export function doctor(repo) {
+// GitHub's "Automatically delete head branches" on the radar repo, judged against the person's choice.
+export function autoDeleteCheck(on, wanted) {
+  if (on === undefined || on === null) return { status: "unknown", detail: "couldn't read the setting" };
+  if (on) return { status: "ok", detail: "on: merged branches are removed by GitHub" };
+  if (wanted) return { status: "warn", detail: "off, but you chose remote branch cleanup", fix: "Run /radar-setup cleanup" };
+  return { status: "ok", detail: wanted === false ? "off (you chose to keep branches)" : "off. /radar-setup cleanup can turn it on" };
+}
+
+export function doctor(repo, prefs = readState().cleanup || {}) {
   const checks = [];
   const add = (name, status, detail, fix) => checks.push({ name, status, detail, ...(fix ? { fix } : {}) });
   const d = detect();
@@ -55,13 +63,16 @@ export function doctor(repo) {
     add("radar repo", "fail", "no radar repo set up on this machine", "Run /radar-setup");
     return { repo, checks };
   }
-  const info = ghJson(["repo", "view", repo, "--json", "visibility,isArchived,defaultBranchRef"]);
+  const info = ghJson(["repo", "view", repo, "--json", "visibility,isArchived,defaultBranchRef,deleteBranchOnMerge"]);
   if (!info.ok) {
     add("radar repo", "unknown", `couldn't read ${repo}: ${info.err}`);
     return { repo, checks };
   }
   const vis = info.data.visibility;
   add("radar repo private", vis === "PRIVATE" ? "ok" : "fail", `${repo} is ${vis.toLowerCase()}`, vis === "PRIVATE" ? undefined : `Reports list your repo names. Make it private: gh repo edit ${repo} --visibility private --accept-visibility-change-consequences`);
+
+  const ad = autoDeleteCheck(info.data.deleteBranchOnMerge, prefs.remote);
+  add("branch cleanup", ad.status, ad.detail, ad.fix);
 
   const secrets = ghJson(["secret", "list", "--repo", repo, "--json", "name"]);
   if (!secrets.ok) add("app secrets", "unknown", `couldn't list secret names: ${secrets.err}`);

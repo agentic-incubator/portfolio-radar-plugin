@@ -4,7 +4,7 @@ Rules for any agent working in this repo (the plugin marketplace and the `portfo
 
 - **The radar app stays read-only.** `scripts/app-manifest.mjs` must only ever ask for `read` permissions and no webhook. A test enforces it; never weaken that test.
 - **No secrets, ever.** No private key, token or App ID of any real user in code, tests, docs or state. Scripts never print or save a private key. `state.mjs` refuses key-like fields.
-- **Nothing deletes.** Commands, skills and agents never delete repos, branches, files or releases, except Ship it deleting the merged PR's branch. Uninstall is a checklist the person runs.
+- **Nothing deletes, unless the person chose it.** Commands, skills and agents never delete repos, files or releases. Branches only: Ship it deleting the merged PR's branch, and the cleanup the person picked in `/radar-setup` (GitHub auto-delete; local `git branch -d` and clean worktree removal after Ship it, only on a clean clone). Never `-D`, `--force`, or main/master/develop/trunk/release. Uninstall is a checklist the person runs.
 - **Yes before every write.** Any step that creates, installs, sets a secret or runs a workflow asks first.
 - **Privacy.** Nothing from a real user's radar (owners, client names, repo names, reports) goes into this public repo. Examples use `octo-user`, `octo-org`, `acme-client`.
 - **No dependencies.** Scripts are zero-dependency Node ES modules (Node 22+ to run them; the radar engine itself runs on 24+ in Actions).
