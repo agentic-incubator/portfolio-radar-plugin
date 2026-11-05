@@ -103,3 +103,31 @@ test("state lives in the config dir, never in a repo", () => {
   assert.equal(stateDir({ XDG_CONFIG_HOME: "/x" }, "linux"), "/x/portfolio-radar");
   assert.match(stateDir({ APPDATA: "C:\\Users\\a\\AppData\\Roaming" }, "win32"), /portfolio-radar$/);
 });
+
+import { build, safeJson } from "../plugins/portfolio-radar/scripts/build-dashboard.mjs";
+
+test("dashboard template carries nothing personal", () => {
+  const html = readFileSync(`${P}/dashboard/index.html`, "utf8");
+  for (const bad of [/pacphi/i, /AI OS/, /\bChris\b/, /trig_[0-9A-Za-z]{10,}/, /RFP-Portfolio/i, /cf-toolsuite/i]) assert.doesNotMatch(html, bad);
+});
+
+test("sample data uses made-up owners only", () => {
+  const d = json(`${P}/dashboard/sample-data.json`);
+  const owners = new Set(d.repos.map((r) => r.owner));
+  assert.deepEqual([...owners].sort(), ["acme-client", "octo-org", "octo-user"]);
+  assert.equal(d.schema, 1);
+});
+
+test("safeJson can't close a script tag", () => {
+  const s = safeJson({ x: "</script><script>alert(1)</script> " });
+  assert.doesNotMatch(s, /<\/script/i);
+  assert.deepEqual(JSON.parse(s), { x: "</script><script>alert(1)</script> " });
+});
+
+test("built dashboard has data and config inline before the page script", () => {
+  const html = readFileSync(`${P}/dashboard/index.html`, "utf8");
+  const out = build(html, { generated: "2026-11-05T00:00:00Z", repos: [] }, { ownerName: "Sam" });
+  assert.ok(out.startsWith("<!doctype html>"));
+  const cfg = out.indexOf('id="radar-config"'), data = out.indexOf('id="radar-data"'), page = out.indexOf("<script>");
+  assert.ok(cfg > 0 && data > cfg && page > data);
+});
