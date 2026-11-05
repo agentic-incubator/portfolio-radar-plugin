@@ -46,7 +46,26 @@ export function autoDeleteCheck(on, wanted) {
   return { status: "ok", detail: wanted === false ? "off (you chose to keep branches)" : "off. /radar-setup cleanup can turn it on" };
 }
 
-export function doctor(repo, prefs = readState().cleanup || {}) {
+// Is the radar's app installed on every owner in radar.config.json? clientOwners are the client's to install.
+export function installCheck(slug, installed, owners = []) {
+  if (!slug) return { status: "unknown", detail: "no app saved on this machine, so installs weren't checked" };
+  if (!installed) return { status: "unknown", detail: "couldn't list your app installs" };
+  const have = new Set(installed.map((l) => l.toLowerCase()));
+  const missing = owners.filter((o) => !have.has(o.toLowerCase()));
+  return missing.length
+    ? { status: "warn", detail: `${slug} isn't installed on ${missing.join(", ")}`, fix: `Install it with All repositories: https://github.com/apps/${slug}/installations/new` }
+    : { status: "ok", detail: `${slug} installed on ${owners.join(", ") || "no owners listed"}` };
+}
+
+export function rulesCheck(hasRulesFile, stewardFound) {
+  if (hasRulesFile === null) return { status: "unknown", detail: "couldn't check for handoff-rules.md" };
+  if (hasRulesFile) return { status: "ok", detail: "handoff-rules.md in your radar repo" };
+  if (stewardFound) return { status: "ok", detail: "workstation-steward's rules" };
+  return { status: "warn", detail: "no handoff-rules.md and no workstation-steward", fix: "Run /radar-setup rules" };
+}
+
+export function doctor(repo, state = readState()) {
+  const prefs = state.cleanup || {};
   const checks = [];
   const add = (name, status, detail, fix) => checks.push({ name, status, detail, ...(fix ? { fix } : {}) });
   const d = detect();
@@ -56,7 +75,7 @@ export function doctor(repo, prefs = readState().cleanup || {}) {
   add("gh", d.tools.gh.found ? "ok" : "fail", d.tools.gh.version ?? "not found", d.install.gh);
   if (!d.tools.gh.found) return { repo, checks };
   add("gh sign-in", d.tools.gh.authed ? "ok" : "fail", d.tools.gh.login ? `as ${d.tools.gh.login}` : "not signed in", "Run: gh auth login");
-  add("workstation-steward", "ok", d.tools.steward.found ? "found: hand-offs use its rules" : "not found: hand-offs use handoff-rules.md (that's fine)");
+  add("workstation-steward", "ok", d.tools.steward.found ? "found (optional)" : "not found (optional)");
   if (!d.tools.gh.authed) return { repo, checks };
 
   if (!repo) {
@@ -94,6 +113,15 @@ export function doctor(repo, prefs = readState().cleanup || {}) {
   const dash = gh(["api", `repos/${repo}/contents/data/dashboard.json`, "-H", "Accept: application/vnd.github.raw", "--jq", ".generated"]);
   if (!dash.ok) add("dashboard data", "unknown", `couldn't read data/dashboard.json: ${dash.err}`);
   else { const f = freshness(dash.out); add("dashboard data", f.status, f.detail, f.fix); }
+
+  const rules = gh(["api", `repos/${repo}/contents/handoff-rules.md`, "--jq", ".name"]);
+  const rc = rulesCheck(rules.ok ? true : /404|Not Found/i.test(rules.err) ? false : null, d.tools.steward.found);
+  add("hand-off rules", rc.status, rc.detail, rc.fix);
+
+  const conf = ghJson(["api", `repos/${repo}/contents/radar.config.json`, "-H", "Accept: application/vnd.github.raw"]);
+  const inst = state.appSlug ? gh(["api", "user/installations", "--paginate", "--jq", `.installations[] | select(.app_slug == "${state.appSlug}") | .account.login`]) : { ok: false };
+  const ic = installCheck(state.appSlug, inst.ok ? inst.out.split("\n").filter(Boolean) : null, conf.ok ? conf.data.owners || [] : []);
+  add("app installs", conf.ok ? ic.status : "unknown", conf.ok ? ic.detail : "couldn't read radar.config.json", conf.ok ? ic.fix : undefined);
 
   const mine = gh(["api", `repos/${repo}/contents/engine.json`, "-H", "Accept: application/vnd.github.raw", "--jq", ".version"]);
   const tags = ghJson(["api", `repos/${TEMPLATE}/tags`, "--jq", "[.[].name]"]);

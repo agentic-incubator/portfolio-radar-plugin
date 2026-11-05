@@ -9,7 +9,7 @@ Lives at the root of the person's private radar repo. It's theirs: `/radar-updat
 
 | Key | Meaning | Wizard default |
 |---|---|---|
-| `owner` | Their GitHub login. Required: the radar stops without it | `gh api user --jq .login` |
+| `owner` | The main account. Just me and consultants: their GitHub login. Product team watching only the team's org: that org. Required: the radar stops without it | Login, or the team's org |
 | `owners` | Accounts and orgs they run, including their own login | Everything they ticked |
 | `clientOwners` | Client orgs, marked as client work | Consultants only |
 | `includePrivate` | Include private repos | `true` |

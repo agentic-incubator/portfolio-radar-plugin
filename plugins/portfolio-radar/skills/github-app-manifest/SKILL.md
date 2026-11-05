@@ -28,9 +28,11 @@ The key is never printed, logged or written to disk. Run the script in the foreg
 
 Actions, Contents, Issues, Metadata, Pull requests, Code scanning alerts (`security_events`), Secret scanning alerts, Dependabot alerts (`vulnerability_alerts`), and org Projects. No webhook. The script refuses to run if any permission isn't `read`. Never change that.
 
+The manifest sets the app to **public** ("any account can install"). That isn't about visibility of data: it only lets the person install their own app on their other accounts and orgs, and lets a client org owner install it. Installing grants nothing until someone with rights on that account picks repos. Say this in one line if they ask.
+
 ## After it's made
 
-Send the person to `installUrl`. For each owner: pick it, choose **All repositories**, install. For an org they're only a member of, GitHub asks the org owner to approve. For a client org, draft the note in the template's `docs/setup.md` for them to send.
+Send the person to `installUrl`. For each owner: pick it, choose **All repositories**, install. Then check it worked: `gh api user/installations --paginate --jq '.installations[] | select(.app_slug == "<slug>") | .account.login'` should list every owner. Say which are missing; never assume an install happened because the person said so. For an org they're only a member of, GitHub asks the org owner to approve. For a client org, draft the note in the template's `docs/setup.md` for them to send.
 
 ## If something goes wrong
 

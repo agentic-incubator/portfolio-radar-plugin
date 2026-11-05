@@ -2,7 +2,7 @@
 
 ## Setup state
 
-The wizard saves progress in `~/.config/portfolio-radar/state.json` (`%APPDATA%\portfolio-radar` on Windows): the radar repo, its clone path, the app's slug and ID, the two cleanup choices (`cleanup.remote`, `cleanup.local`), and which steps are done. Never a key or token. `scripts/state.mjs` refuses key-like fields.
+The wizard saves progress in `~/.config/portfolio-radar/state.json` (`%APPDATA%\portfolio-radar` on Windows; `PORTFOLIO_RADAR_HOME` overrides the folder for test runs): the radar repo, its clone path, the app's slug and ID, the two cleanup choices (`cleanup.remote`, `cleanup.local`), and which steps are done. Never a key or token. `scripts/state.mjs` refuses key-like fields.
 
 ## Scripts
 

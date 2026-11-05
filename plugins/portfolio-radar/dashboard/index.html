@@ -186,6 +186,7 @@ code{font:12.5px var(--f-mono);background:var(--bg);border:1px solid var(--line)
 </header>
 
 <main class="wrap" id="app">
+  <div class="empty" id="js-note" style="margin:16px 0">The dashboard's script didn't run, so nothing below will fill in. Open this file in Chrome, Safari, Edge or Firefox. Some previews show a page without running it.</div>
   <div class="hero">
     <div class="scope">
       <canvas id="radar" width="720" height="720" aria-label="Radar of repos: the closer to the centre, the more a repo needs you"></canvas>
@@ -203,7 +204,7 @@ code{font:12.5px var(--f-mono);background:var(--bg);border:1px solid var(--line)
   <section id="s-needs"><div class="sh"><h2>Needs you</h2><p>Ranked: exposed secrets, critical and high alerts, red CI, then people's PRs.</p></div><div class="grid" id="needs"></div><div class="more" id="needs-more"></div></section>
   <section id="s-ship"><div class="sh"><h2>Ready to ship</h2><p>People's PRs and their CI. Ship it squash-merges a green PR and deletes its branch.</p></div><div id="ship"></div></section>
   <section id="s-patterns"><div class="sh"><h2>One fix, many repos</h2><p>The same vulnerable package in several repos. One sweep clears them all.</p></div><div id="patterns"></div></section>
-  <section id="s-bots"><div class="sh"><h2>Dependency bots</h2><p>Moving everything to Renovate. Dependabot alerts stay on; Dependabot's update PRs retire.</p></div><div id="bots"></div></section>
+  <section id="s-bots"><div class="sh"><h2>Dependency bots</h2><p id="bots-sub">Which repos get dependency updates from Renovate, Dependabot, both or neither.</p></div><div id="bots"></div></section>
   <section id="s-goals"><div class="sh"><h2>Goals</h2><p>Repos tied to what you're working toward.</p></div><div class="grid" id="goals"></div></section>
   <section id="s-clients"><div class="sh"><h2>Clients</h2><p>Repos in client orgs.</p></div><div id="clients"></div></section>
   <section id="s-noise"><div class="sh"><h2>Noise</h2><p>Archived repos and forks that still raise alerts or bot PRs. Kept apart so they don't bury real work.</p></div><div id="noise"></div></section>
@@ -218,6 +219,7 @@ code{font:12.5px var(--f-mono);background:var(--bg);border:1px solid var(--line)
 <script>
 (() => {
 "use strict";
+document.getElementById("js-note")?.remove();
 // Per-person settings come from config.json next to data.json, written by /radar-dashboard. Nothing personal is in this file.
 const DEFAULTS = { ownerName: "you", triggerId: null, steward: false, stewardRepos: [], preferRenovate: false, radarRepo: "", runsWhere: "a new Claude Code task" };
 let CFG = { ...DEFAULTS };
@@ -535,6 +537,7 @@ const fullOf = (name) => (name.includes("/") ? name : `${D.owner}/${name}`);
 const byName = (name) => D.repos.find((r) => r.name === name || r.fullName === name);
 
 function renderBots() {
+  $("bots-sub").textContent = CFG.preferRenovate ? "Moving everything to Renovate. Dependabot alerts stay on; Dependabot's update PRs retire." : "Which repos get dependency updates from Renovate, Dependabot, both or neither.";
   const u = D.updaters || { renovate: [], dependabot: [], both: [], none: [] };
   const inView = (list) => list.map(byName).filter(Boolean).filter((r) => visible().includes(r));
   const parts = [["renovate", "Renovate", "var(--ok)"], ["both", "Both", "var(--ci)"], ["dependabot", "Dependabot", "var(--critical)"], ["none", "Neither", "var(--stale)"]].map(([k, l, c]) => [k, l, c, inView(u[k] || [])]);
