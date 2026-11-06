@@ -37,6 +37,8 @@ button{font:inherit;color:inherit}
 .brand h1{font:700 22px/1 var(--f-display);letter-spacing:.08em;text-transform:uppercase;margin:0}
 .brand h1 span{color:var(--accent)}
 .stamp{font:12px var(--f-mono);color:var(--muted)}
+.foot{max-width:1280px;margin:8px auto 0;padding:20px 16px 32px;border-top:1px solid var(--line-2);display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 24px;font:12px var(--f-body);color:var(--muted)}
+.foot .ver{font:12px var(--f-mono);color:var(--dim)}
 .stamp.stale{color:var(--warn)}
 .filters{display:flex;flex-wrap:wrap;gap:6px}
 .chip{border:1px solid var(--line-2);background:transparent;border-radius:999px;padding:4px 11px;font:500 12px var(--f-display);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);cursor:pointer}
@@ -213,6 +215,8 @@ code{font:12.5px var(--f-mono);background:var(--bg);border:1px solid var(--line)
   <section id="s-gaps"><div class="sh"><h2>Couldn't check</h2><p>Gaps in today's read. A gap is never shown as zero.</p></div><div id="gaps"></div></section>
 </main>
 
+<footer class="foot"><span>Built with ❤️ by Chris Phillipson, Principal, CP Ventures Group, LLC</span><span class="ver" id="versions">portfolio-radar plugin</span></footer>
+
 <div id="drawer-root"></div>
 <div class="toast" id="toast" hidden></div>
 
@@ -220,6 +224,8 @@ code{font:12.5px var(--f-mono);background:var(--bg);border:1px solid var(--line)
 (() => {
 "use strict";
 document.getElementById("js-note")?.remove();
+// Bumped with the plugin manifests; a test keeps them in step.
+const PLUGIN_VERSION = "0.4.0";
 // Per-person settings come from config.json next to data.json, written by /radar-dashboard. Nothing personal is in this file.
 const DEFAULTS = { ownerName: "you", triggerId: null, steward: false, stewardRepos: [], preferRenovate: false, radarRepo: "", runsWhere: "a new Claude Code task" };
 let CFG = { ...DEFAULTS };
@@ -314,6 +320,8 @@ function render() {
   $("stamp").textContent = `as of ${gen.toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}`;
   $("stamp").classList.toggle("stale", hours > 30);
   if (hours > 30) $("stamp").textContent += " · stale";
+  // An older engine doesn't write its version: say so rather than guess.
+  $("versions").textContent = `plugin v${PLUGIN_VERSION} · engine ${D.engine ? `v${D.engine}` : "version not reported (update with /radar-update)"}`;
   renderFilters(); renderLegend(); renderVitals(); renderMoves(); drawRadar();
   renderNeeds(); renderShip(); renderPatterns(); renderBots(); renderGoals(); renderClients(); renderNoise(); renderDrift(); renderFlight(); renderGaps();
 }

@@ -107,7 +107,8 @@ test("state lives in the config dir, never in a repo", () => {
 import { build, safeJson } from "../plugins/portfolio-radar/scripts/build-dashboard.mjs";
 
 test("dashboard template carries nothing personal", () => {
-  const html = readFileSync(`${P}/dashboard/index.html`, "utf8");
+  // The author's credit line is public (it's in the README); nothing else personal may appear.
+  const html = readFileSync(`${P}/dashboard/index.html`, "utf8").replace("Built with ❤️ by Chris Phillipson, Principal, CP Ventures Group, LLC", "");
   for (const bad of [/pacphi/i, /AI OS/, /\bChris\b/, /trig_[0-9A-Za-z]{10,}/, /RFP-Portfolio/i, /cf-toolsuite/i]) assert.doesNotMatch(html, bad);
 });
 
