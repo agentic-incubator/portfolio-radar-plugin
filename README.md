@@ -27,8 +27,9 @@ The wizard takes about 20 minutes. It checks your machine and offers to install 
 | `/radar-update` | Brings the newest engine into your copy as a pull request |
 | `/radar-dashboard` | Publishes or refreshes the dashboard: a private claude.ai artifact, or a single HTML file |
 | `/radar-actions` | Runs dashboard button requests: hand-offs, triage plans, approved steps, Ship it |
+| `/radar-triage` | Pulls every open loop into one de-duplicated action list, checked against GitHub now: PRs the hand-offs opened, stopped requests, decisions waiting on you, and (in a Claude project) radar threads left waiting. Then closes the old threads and duplicate PRs if you say yes |
 
-Skills: `system-detect`, `github-app-manifest`, `radar-config`, `handoff-rules`, `branch-cleanup`, `dashboard`, `triage-plan`. Agents: `radar-installer`, `repo-handoff`, `portfolio-analyst`. A session-start hook says one line if your radar needs attention, and stays quiet otherwise.
+Skills: `system-detect`, `github-app-manifest`, `radar-config`, `handoff-rules`, `branch-cleanup`, `dashboard`, `triage-plan`, `radar-triage`. Agents: `radar-installer`, `repo-handoff`, `portfolio-analyst`. A session-start hook says one line if your radar needs attention, and stays quiet otherwise.
 
 ## How it fits together
 
@@ -59,6 +60,12 @@ Preview it with made-up data: `node plugins/portfolio-radar/scripts/build-dashbo
 - Buttons that change things use Anthropic's Claude GitHub app, open a PR and stop. Only "Ship it", pressed by you, merges, and only if the PR is unchanged and green.
 - Nothing is installed without your yes, and nothing is deleted unless you chose it.
 - To take a radar down (after a test run, or to demo setup again), follow [docs/teardown.md](docs/teardown.md). Deleting the repo doesn't delete the GitHub App.
+
+## Triage: one list of what needs you
+
+Hand-offs, sweeps and triage plans each leave something behind: a PR to ship, a decision, a step only you can do. Over a few days these spread across PRs and chats, and parallel dashboard runs can open the same PR twice. `/radar-triage` gathers them, checks each one's live state, and sorts them into: decide, you do this, ready to ship, needs a fix, duplicates to close, waiting on someone else, already done, and couldn't check. Green PRs that rewrite the same lockfile are numbered so you ship them one at a time (or fold them into one).
+
+Inside a Claude project it also reads the radar threads that are waiting on you, posts the combined list in the current thread, and offers to close the old ones. Elsewhere it works from GitHub and the dashboard queue, and says it skipped threads. It changes nothing until you say yes, and it never merges.
 
 ## Branch cleanup (your choice)
 

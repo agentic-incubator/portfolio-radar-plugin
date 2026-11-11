@@ -13,6 +13,7 @@ The wizard saves progress in `~/.config/portfolio-radar/state.json` (`%APPDATA%\
 | `doctor.mjs` | Health checks via `gh` | Nothing |
 | `state.mjs` | Read and write setup state | The state file |
 | `cleanup.mjs` | Branch cleanup: turns on GitHub's auto-delete for chosen repos; after Ship it, fast-forwards the clone and removes the merged branch with `git branch -d` and clean worktrees. Dry run unless `--yes`; stops on unsaved work; never forces | Repo settings; the local clone |
+| `triage.mjs` | Sorts the items `/radar-triage` gathered: merges repeats, marks duplicate PRs (never bot PRs), orders green PRs that share a lockfile, and buckets the rest. Unreadable items stay under "Couldn't check". No network | Nothing |
 | `build-dashboard.mjs` | One self-contained dashboard HTML file, data and settings inline | The output file you name |
 
 ## Releases
