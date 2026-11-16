@@ -11,6 +11,8 @@ Reply with:
 2. Up to five moves for today, most urgent first (exposed secrets, then critical/high alerts, CI red on the default branch, people's PRs waiting). For each: the repo, what's wrong, and the one next step.
 3. Anything under "Couldn't check", in one line each.
 
+If the person asks about stars, downloads, forks, lines of code or other repo metrics, answer from section 7 of the report (engine 0.5.0+). "?" there means unread, never zero, and "since <date>" means the window isn't full yet.
+
 If `$ARGUMENTS` names an owner, only include that owner's repos. If the report is more than 30 hours old, say so first and suggest `/radar-doctor`.
 
 Read-only. Offer hand-offs (see the dashboard skill) but don't start any without a yes.

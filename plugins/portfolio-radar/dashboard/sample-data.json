@@ -1,6 +1,6 @@
 {
  "schema": 1,
- "engine": "0.4.0",
+ "engine": "0.5.0",
  "generated": "2026-11-05T11:30:00Z",
  "owner": "octo-user",
  "staleDays": 90,
@@ -565,6 +565,37 @@
      "renovate"
     ],
     "dashboard": "https://github.com/octo-user/web-shop/issues/1"
+   },
+   "metrics": {
+    "created": "2024-03-02T10:00:00Z",
+    "lastCommit": "2026-11-14T16:20:00Z",
+    "stars": 48,
+    "openIssues": 6,
+    "prsClosed": 312,
+    "prsMerged": 280,
+    "forks": {
+     "total": 9,
+     "active": 2,
+     "activeMonths": 6
+    },
+    "loc": {
+     "total": 41200,
+     "byLanguage": {
+      "TypeScript": 36100,
+      "CSS": 5100
+     }
+    },
+    "downloads": {
+     "sources": [
+      "npm:@octo-user/web-shop-sdk"
+     ],
+     "d1": 40,
+     "d7": 310,
+     "d30": 1290,
+     "d182": 7420,
+     "partialSince": {}
+    },
+    "weeklyAt": "2026-11-16"
    }
   },
   {
@@ -608,6 +639,39 @@
     ],
     "configured": [],
     "dashboard": null
+   },
+   "metrics": {
+    "created": "2023-07-19T09:00:00Z",
+    "lastCommit": "2026-11-10T08:00:00Z",
+    "stars": 126,
+    "openIssues": 14,
+    "prsClosed": 540,
+    "prsMerged": 501,
+    "forks": {
+     "total": 31,
+     "active": 4,
+     "activeMonths": 6
+    },
+    "loc": {
+     "total": 58800,
+     "byLanguage": {
+      "Go": 55000,
+      "Shell": 3800
+     }
+    },
+    "downloads": {
+     "sources": [
+      "releases"
+     ],
+     "d1": 12,
+     "d7": 95,
+     "d30": 402,
+     "d182": 880,
+     "partialSince": {
+      "d182": "2026-11-05"
+     }
+    },
+    "weeklyAt": "2026-11-16"
    }
   },
   {
@@ -668,6 +732,36 @@
      "renovate"
     ],
     "dashboard": "https://github.com/octo-org/data-pipeline/issues/1"
+   },
+   "metrics": {
+    "created": "2025-01-08T12:00:00Z",
+    "lastCommit": "2026-11-15T21:00:00Z",
+    "stars": 7,
+    "openIssues": 2,
+    "prsClosed": 88,
+    "prsMerged": 80,
+    "forks": {
+     "total": 1,
+     "active": 0,
+     "activeMonths": 6
+    },
+    "loc": {
+     "total": 12900,
+     "byLanguage": {
+      "Python": 12900
+     }
+    },
+    "downloads": {
+     "sources": [
+      "pypi:octo-pipeline"
+     ],
+     "d1": 3,
+     "d7": 21,
+     "d30": 77,
+     "d182": null,
+     "partialSince": {}
+    },
+    "weeklyAt": "2026-11-16"
    }
   },
   {
@@ -723,6 +817,35 @@
      "renovate"
     ],
     "dashboard": "https://github.com/octo-org/docs-site/issues/1"
+   },
+   "metrics": {
+    "created": "2024-11-01T12:00:00Z",
+    "lastCommit": "2026-10-30T12:00:00Z",
+    "stars": 3,
+    "openIssues": 0,
+    "prsClosed": 41,
+    "prsMerged": 40,
+    "forks": {
+     "total": 0,
+     "active": 0,
+     "activeMonths": 6
+    },
+    "loc": {
+     "total": 2100,
+     "byLanguage": {
+      "Astro": 1500,
+      "CSS": 600
+     }
+    },
+    "downloads": {
+     "sources": [],
+     "d1": null,
+     "d7": null,
+     "d30": null,
+     "d182": null,
+     "partialSince": {}
+    },
+    "weeklyAt": "2026-11-16"
    }
   },
   {
@@ -765,6 +888,32 @@
      "renovate"
     ],
     "dashboard": "https://github.com/octo-user/cli-tool/issues/1"
+   },
+   "metrics": {
+    "created": "2025-06-21T12:00:00Z",
+    "lastCommit": "2026-11-16T07:00:00Z",
+    "stars": 212,
+    "openIssues": 9,
+    "prsClosed": 230,
+    "prsMerged": null,
+    "forks": {
+     "total": 18,
+     "active": 5,
+     "activeMonths": 6
+    },
+    "loc": null,
+    "downloads": {
+     "sources": [
+      "releases",
+      "crates:octo-cli"
+     ],
+     "d1": 88,
+     "d7": 640,
+     "d30": 2710,
+     "d182": 11980,
+     "partialSince": {}
+    },
+    "weeklyAt": "2026-11-16"
    }
   },
   {
