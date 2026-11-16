@@ -19,6 +19,20 @@ The page detects what it has at run time, so the same file serves every tier.
 
 The footer shows the credit line, the plugin version (`PLUGIN_VERSION` in `index.html`, bumped with the manifests) and the engine version from `data.json`'s `engine` (engine 0.4.0 and later). With an older engine it says the version isn't reported and suggests `/radar-update`.
 
+## Section menu
+
+The page shows one section at a time. It opens on **Overview** (the scope, vitals and today's moves); a menu at the top switches sections, grouped by what you do next:
+
+| Group | Sections |
+|---|---|
+| Start | Overview |
+| Act now | Needs you, Ready to ship, In flight |
+| Clean up in bulk | One fix, many repos, Dependency bots, Noise |
+| Keep an eye on | Goals, Clients, Metrics, Drift |
+| Today's read | Couldn't check |
+
+Each tab shows a count. `#<section>` at the end of the page's address opens that section (for example `#metrics`, `#flight`). In flight is a fixed-height table that shows about 10 rows and scrolls the rest; click a column (When, Action, Repo, Status) to sort, and the sort is remembered in the browser.
+
 ## Metrics section
 
 With engine 0.5.0 or later, each repo in `data.json` carries `metrics`, and the page shows a Metrics table: stars, forks (active and all), open issues, PRs closed (merged), lines of code, downloads for 7 days, 30 days and 6 months, last commit and created date. Click a column to sort; the sort is remembered in the browser. "?" means unread (never 0), "-" means the repo ships nothing countable, and "since <date>" means a download window isn't full yet. The lines-of-code column is hidden when no repo has a count (`metrics.loc: false`). With an older engine the section says to run `/radar-update`. What each number means is in the template's `docs/how-it-works.md#metrics`.

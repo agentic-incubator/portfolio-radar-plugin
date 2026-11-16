@@ -136,6 +136,26 @@ details.fnote p{margin:0}
 .muted{color:var(--muted)}
 .empty{border:1px dashed var(--line-2);border-radius:var(--r);padding:16px;color:var(--muted)}
 
+.secnav{display:flex;flex-wrap:wrap;gap:10px 22px;margin-top:14px;padding-bottom:10px;border-bottom:1px solid var(--line);scrollbar-width:thin}
+.tab{flex:0 0 auto;display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line-2);background:var(--panel);border-radius:8px;padding:6px 12px;font:600 12px var(--f-display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);cursor:pointer;white-space:nowrap}
+.tgroup{display:flex;flex-direction:column;gap:5px;min-width:0}
+.tglabel{font:600 10px/1 var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.tgtabs{display:flex;flex-wrap:wrap;gap:6px}
+@media (max-width:640px){.secnav{flex-wrap:nowrap;overflow-x:auto;padding-bottom:6px}.tgroup{flex:0 0 auto}.tgtabs{flex-wrap:nowrap}.tglabel{white-space:nowrap}}
+.tab:hover{border-color:var(--accent);color:var(--fg)}
+.tab[aria-current="page"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.tab .n{font:500 11px var(--f-mono);letter-spacing:0;padding:0 6px;border-radius:999px;background:color-mix(in srgb,var(--c,var(--muted)) 22%,transparent);color:var(--c,var(--muted))}
+.tab[aria-current="page"] .n{background:#04131c33;color:var(--accent-ink)}
+.hero{margin-top:20px}
+main[data-view]>section{display:none}
+main[data-view]>section.on{display:block;margin-top:20px}
+main[data-view]:not([data-view="overview"])>.hero{display:none}
+
+.ftbl{max-height:500px;overflow:auto;overscroll-behavior:contain}
+.ftbl thead th{position:sticky;top:0;z-index:1;box-shadow:inset 0 -1px 0 var(--line)}
+.fsort-m{display:none;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:8px}
+@media (max-width:760px){.fsort-m{display:flex}.ftbl{max-height:70vh}}
+
 /* Tables */
 .tbl{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r)}
 table{border-collapse:collapse;width:100%;min-width:640px}
@@ -191,7 +211,8 @@ code{font:12.5px var(--f-mono);background:var(--bg);border:1px solid var(--line)
   </div>
 </header>
 
-<main class="wrap" id="app">
+<main class="wrap" id="app" data-view="overview">
+  <nav class="secnav" id="secnav" aria-label="Sections"></nav>
   <div class="empty" id="js-note" style="margin:16px 0">The dashboard's script didn't run, so nothing below will fill in. Open this file in Chrome, Safari, Edge or Firefox. Some previews show a page without running it.</div>
   <div class="hero">
     <div class="scope">
@@ -230,7 +251,7 @@ code{font:12.5px var(--f-mono);background:var(--bg);border:1px solid var(--line)
 "use strict";
 document.getElementById("js-note")?.remove();
 // Bumped with the plugin manifests; a test keeps them in step.
-const PLUGIN_VERSION = "0.6.0";
+const PLUGIN_VERSION = "0.7.0";
 // Per-person settings come from config.json next to data.json, written by /radar-dashboard. Nothing personal is in this file.
 const DEFAULTS = { ownerName: "you", triggerId: null, steward: false, stewardRepos: [], preferRenovate: false, radarRepo: "", runsWhere: "a new Claude Code task" };
 let CFG = { ...DEFAULTS };
@@ -295,7 +316,7 @@ use("db").then((db) => {
     db.collection("actions").orderBy("requestedAt", "desc").limit(40).onSnapshot((snap) => {
       flight.clear();
       for (const d of snap.docs) flight.set(d.id, d.data());
-      renderFlight();
+      renderFlight(); renderNav();
     }, () => renderFlight("The action log couldn't be read just now."));
   } catch { renderFlight("The action log couldn't be read just now."); }
 });
@@ -317,6 +338,52 @@ const visible = () => (D?.repos || []).filter((r) => {
   return r.owner.toLowerCase() === filter.toLowerCase() && !r.client;
 });
 
+// ---------- section menu: one view at a time ----------
+const VIEW_GROUPS = [
+  ["Start", [["overview", "Overview", null]]],
+  ["Act now", [["needs", "Needs you", "var(--critical)"], ["ship", "Ready to ship", "var(--ok)"], ["flight", "In flight", "var(--accent)"]]],
+  ["Clean up in bulk", [["patterns", "One fix, many repos", "var(--critical)"], ["bots", "Dependency bots", "var(--drift)"], ["noise", "Noise", "var(--drift)"]]],
+  ["Keep an eye on", [["goals", "Goals", "var(--accent)"], ["clients", "Clients", "var(--accent)"], ["metrics", "Metrics", "var(--accent)"], ["drift", "Drift", "var(--muted)"]]],
+  ["Today's read", [["gaps", "Couldn't check", "var(--warn)"]]],
+];
+const VIEWS = VIEW_GROUPS.flatMap(([, v]) => v);
+const fromHash = () => { const v = location.hash.replace(/^#/, ""); return VIEWS.some(([k]) => k === v) ? v : null; };
+let view = fromHash() || "overview";
+function viewCount(k) {
+  if (!D) return null;
+  const rs = visible();
+  switch (k) {
+    case "needs": return rs.filter((r) => r.score >= 45).length;
+    case "ship": return rs.reduce((n, r) => n + r.humanPrs.length, 0);
+    case "patterns": return (D.patterns?.packages || []).length;
+    case "bots": return rs.filter((r) => r.updaters?.tools.includes("dependabot")).length;
+    case "goals": return (D.goals || []).length;
+    case "clients": return D.repos.filter((r) => r.client).length;
+    case "noise": return (D.noise || []).length;
+    case "drift": return rs.filter((r) => r.staleDays > (D.staleDays || 90) || r.hasAgents === false).length;
+    case "metrics": return rs.filter((r) => r.metrics).length;
+    case "flight": return caps.db ? [...flight.values()].filter((a) => a.status === "queued" || a.status === "running").length : null;
+    case "gaps": return (D.warnings || []).length;
+    default: return null;
+  }
+}
+function renderNav() {
+  const tab = ([k, label, c]) => { const n = viewCount(k); return h("button", { class: "tab", "aria-current": view === k ? "page" : null, onclick: () => showView(k) }, label, n ? h("span", { class: "n", style: c ? `--c:${c}` : null }, n) : ""); };
+  $("secnav").replaceChildren(...VIEW_GROUPS.map(([g, vs]) => h("div", { class: "tgroup", role: "group", "aria-label": g }, h("span", { class: "tglabel" }, g), h("div", { class: "tgtabs" }, vs.map(tab)))));
+  $("app").dataset.view = view;
+  $("secnav").querySelector("[aria-current]")?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  for (const sec of document.querySelectorAll("main > section")) sec.classList.toggle("on", sec.id === `s-${view}`);
+}
+function showView(k) {
+  view = k;
+  try { history.replaceState(null, "", `#${k}`); } catch {}
+  renderNav();
+  if (k === "overview" && D) drawRadar();
+  scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+}
+addEventListener("hashchange", () => { const v = fromHash(); if (v && v !== view) showView(v); });
+renderNav();
+
 // ---------- render ----------
 function render() {
   if (!D) return;
@@ -328,7 +395,7 @@ function render() {
   // An older engine doesn't write its version: say so rather than guess.
   $("versions").textContent = `plugin v${PLUGIN_VERSION} · engine ${D.engine ? `v${D.engine}` : "version not reported (update with /radar-update)"}`;
   renderFilters(); renderLegend(); renderVitals(); renderMoves(); drawRadar();
-  renderNeeds(); renderShip(); renderPatterns(); renderBots(); renderGoals(); renderClients(); renderNoise(); renderDrift(); renderMetrics(); renderFlight(); renderGaps();
+  renderNeeds(); renderShip(); renderPatterns(); renderBots(); renderGoals(); renderClients(); renderNoise(); renderDrift(); renderMetrics(); renderFlight(); renderGaps(); renderNav();
 }
 
 function renderFilters() {
@@ -691,16 +758,36 @@ function renderMetrics() {
   $("metrics").replaceChildren(...kids);
 }
 
+// In flight: a fixed-height, scrollable table (about 10 rows visible) with sortable columns.
+let flightSort = store.get("pr.fsort") || "when";
+let flightDir = store.get("pr.fdir") === "asc" ? "asc" : "desc";
+const STATUS_ORDER = { queued: 0, sent: 1, running: 2, approved: 3, stopped: 4, done: 5 };
+const FLIGHT_COLS = [
+  ["when", "When", (a) => a.requestedAt || ""],
+  ["action", "Action", (a) => (a.label || a.action || "").toLowerCase()],
+  ["repo", "Repo", (a) => (a.repo || "").toLowerCase()],
+  ["status", "Status", (a) => STATUS_ORDER[a.status || "sent"] ?? 9],
+];
+function sortFlight(k) {
+  if (flightSort === k) flightDir = flightDir === "asc" ? "desc" : "asc"; else { flightSort = k; flightDir = k === "when" ? "desc" : "asc"; }
+  store.set("pr.fsort", flightSort); store.set("pr.fdir", flightDir); renderFlight();
+}
 function renderFlight(err) {
   if (!caps.db) return $("flight").replaceChildren(h("div", { class: "empty" }, err || "The action log appears here when you open the dashboard on claude.ai."));
   const items = [...flight.entries()];
   if (!items.length) return $("flight").replaceChildren(h("div", { class: "empty" }, err || "Nothing handed off yet. Hand-off and Ship it buttons add a row here."));
+  const [, , key] = FLIGHT_COLS.find(([k]) => k === flightSort) || FLIGHT_COLS[0];
+  items.sort(([, x], [, y]) => { const a = key(x), b = key(y); const c = typeof a === "number" ? a - b : String(a).localeCompare(String(b)); return (flightDir === "asc" ? c : -c) || String(y.requestedAt || "").localeCompare(String(x.requestedAt || "")); });
+  const arrow = (k) => (k === flightSort ? (flightDir === "asc" ? " ▲" : " ▼") : "");
   const stC = { queued: "var(--warn)", running: "var(--accent)", done: "var(--good)", stopped: "var(--bad)" };
-  $("flight").replaceChildren(h("div", { class: "tbl" }, h("table", {}, h("thead", {}, h("tr", {}, h("th", {}, "When"), h("th", {}, "Action"), h("th", {}, "Repo"), h("th", {}, "Status"))),
+  const head = h("tr", {}, FLIGHT_COLS.map(([k, label]) => h("th", { "aria-sort": k === flightSort ? (flightDir === "asc" ? "ascending" : "descending") : null }, h("button", { class: "sort", onclick: () => sortFlight(k) }, label, arrow(k)))));
+  const phoneSort = h("div", { class: "fsort-m", role: "group", "aria-label": "Sort the action log" }, h("span", { class: "sub" }, "Sort"), FLIGHT_COLS.map(([k, label]) => h("button", { class: "chip", "aria-pressed": String(k === flightSort), onclick: () => sortFlight(k) }, label, arrow(k))));
+  $("flight").replaceChildren(phoneSort, h("div", { class: "tbl ftbl" }, h("table", {}, h("thead", {}, head),
     h("tbody", {}, items.map(([id, a]) => h("tr", {}, h("td", { class: "mono nowrap" }, a.requestedAt ? new Date(a.requestedAt).toLocaleString([], { dateStyle: "short", timeStyle: "short" }) : "–"),
       h("td", { class: "nowrap" }, a.label || a.action), h("td", {}, a.repo ? h("span", { class: "repo-cell", title: a.repo }, a.repo) : "–"),
       h("td", {}, h("div", { class: "fstat" }, h("div", { class: "fline" }, pill(a.status || "sent", stC[a.status] || "var(--warn)"), a.fromPlan ? h("span", { class: "sub" }, "From an approved plan") : "", a.resultUrl ? h("a", { href: a.resultUrl, target: "_blank", rel: "noopener" }, "Result ↗") : ""),
-        a.resultNote ? noteBlock(a.resultNote) : "", a.action === "triage" && Array.isArray(a.steps) && a.steps.length ? planBlock(id, a) : ""))))))));
+        a.resultNote ? noteBlock(a.resultNote) : "", a.action === "triage" && Array.isArray(a.steps) && a.steps.length ? planBlock(id, a) : ""))))))),
+    items.length > 10 ? h("div", { class: "note", style: "margin-top:6px" }, items.length >= 40 ? "The latest 40 actions. Scroll the table for more." : `${items.length} actions. Scroll the table for more.`) : "");
 }
 function noteBlock(t) {
   const short = t.slice(0, 200).replace(/\s+\S*$/, "") + "…";
