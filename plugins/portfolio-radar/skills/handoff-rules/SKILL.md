@@ -5,7 +5,7 @@ description: The rules every portfolio-radar hand-off follows when it opens a PR
 
 # Hand-off rules
 
-A hand-off is any action that changes a repo: fold bot PRs, fix CI, add AGENTS.md, sweep a package across repos, an approved triage step. Ship it is the only action that merges.
+A hand-off is any action that changes a repo: fold bot PRs, fix CI, add AGENTS.md, sweep a package across repos (or every package at once with Sweep all, one PR per repo), an approved triage step. Ship it is the only action that merges.
 
 ## Where the rules come from
 

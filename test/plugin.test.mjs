@@ -162,3 +162,17 @@ test("Ship all asks first and lists each PR it will merge", () => {
   assert.match(fn, /isOwner\(\)/, "only the owner can ship");
   assert.ok(!/fire\(/.test(html.slice(html.indexOf("function renderShip"), html.indexOf("function renderPatterns"))), "the table's button must not queue without the confirmation");
 });
+
+test("Sweep all asks first, lists each repo, and never merges", () => {
+  const html = readFileSync(`${P}/dashboard/index.html`, "utf8");
+  const fn = html.slice(html.indexOf("function confirmSweepAll"), html.indexOf("async function fire"));
+  assert.match(fn, /drawer\(/, "Sweep all must open a confirmation");
+  assert.match(fn, /targets\.map\(/, "the confirmation lists every repo");
+  assert.match(fn, /isOwner\(\)/, "only the owner can sweep everything");
+  assert.match(fn, /STEWARD\.includes/, "steward-managed repos are left out");
+  assert.ok(!/fire\(/.test(html.slice(html.indexOf("function renderPatterns"), html.indexOf("const fullOf"))), "the section's button must not queue without the confirmation");
+  const doc = readFileSync(`${P}/commands/radar-actions.md`, "utf8");
+  const sweep = doc.slice(doc.indexOf("## Sweep all"), doc.indexOf("## After"));
+  assert.match(sweep, /never merges/);
+  assert.match(sweep, /repo by repo/);
+});

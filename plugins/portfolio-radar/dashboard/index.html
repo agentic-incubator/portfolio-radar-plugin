@@ -174,6 +174,7 @@ tr:last-child td{border-bottom:0}
 .shiplist code{font-size:11px}
 .shipres{margin:6px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;font-size:12px}
 .shipres li{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px}
+.shipres .sub{color:var(--muted)}
 td .sub{color:var(--muted);font-size:12px}
 
 /* Patterns */
@@ -259,7 +260,7 @@ code{font:12.5px var(--f-mono);background:var(--bg);border:1px solid var(--line)
 "use strict";
 document.getElementById("js-note")?.remove();
 // Bumped with the plugin manifests; a test keeps them in step.
-const PLUGIN_VERSION = "0.8.0";
+const PLUGIN_VERSION = "0.9.0";
 // Per-person settings come from config.json next to data.json, written by /radar-dashboard. Nothing personal is in this file.
 const DEFAULTS = { ownerName: "you", triggerId: null, steward: false, stewardRepos: [], preferRenovate: false, radarRepo: "", runsWhere: "a new Claude Code task" };
 let CFG = { ...DEFAULTS };
@@ -678,7 +679,11 @@ function renderPatterns() {
   const max = Math.max(...pk.map((p) => p.repos.length));
   const sevC = { critical: "var(--secret)", high: "var(--critical)", medium: "var(--ci)", moderate: "var(--ci)", low: "var(--muted)" };
   const shown = pk.slice(0, renderPatterns.all ? 999 : 10);
-  $("patterns").replaceChildren(...shown.map((p) => h("div", { class: "pat" },
+  const repoCount = new Set(pk.flatMap((p) => p.repos.map(fullOf))).size;
+  const sweepAllBtn = h("button", { class: "btn primary" }, `Sweep all (${pk.length})`);
+  sweepAllBtn.addEventListener("click", () => confirmSweepAll(pk));
+  const bar = h("div", { class: "tblbar" }, h("span", { class: "sub" }, `${pk.length} ${pk.length === 1 ? "package" : "packages"} across ${repoCount} repos`), sweepAllBtn);
+  $("patterns").replaceChildren(bar, ...shown.map((p) => h("div", { class: "pat" },
     h("div", {}, h("div", { class: "pkg" }, p.pkg), h("div", { class: "sub muted", style: "font-size:12px" }, `${p.ecosystem} · worst ${p.worst}`)),
     h("div", {}, h("div", { class: "track" }, h("div", { class: "fill", style: `width:${p.repos.length / max * 100}%;background:${sevC[p.worst] || "var(--muted)"}` })), h("div", { class: "repos" }, `${p.repos.length} repos: ${p.repos.join(", ")}`)),
     h("div", { class: "acts" }, handoffBtn({ fullName: p.repos[0], name: `${p.pkg} sweep` }, "sweep-package", "Sweep", { pkg: p.pkg, ecosystem: p.ecosystem, repos: p.repos.map(fullOf) })))),
@@ -866,7 +871,7 @@ function renderFlight(err) {
     h("tbody", {}, items.map(([id, a]) => h("tr", {}, h("td", { class: "mono nowrap" }, a.requestedAt ? new Date(a.requestedAt).toLocaleString([], { dateStyle: "short", timeStyle: "short" }) : "–"),
       h("td", { class: "nowrap" }, a.label || a.action), h("td", {}, a.repo ? h("span", { class: "repo-cell", title: a.repo }, a.repo) : "–"),
       h("td", {}, h("div", { class: "fstat" }, h("div", { class: "fline" }, pill(a.status || "sent", stC[a.status] || "var(--warn)"), a.fromPlan ? h("span", { class: "sub" }, "From an approved plan") : "", a.resultUrl ? h("a", { href: a.resultUrl, target: "_blank", rel: "noopener" }, "Result ↗") : ""),
-        a.resultNote ? noteBlock(a.resultNote) : "", a.action === "ship-all" && Array.isArray(a.prs) ? shipAllBlock(a) : "", a.action === "triage" && Array.isArray(a.steps) && a.steps.length ? planBlock(id, a) : ""))))))),
+        a.resultNote ? noteBlock(a.resultNote) : "", a.action === "ship-all" && Array.isArray(a.prs) ? shipAllBlock(a) : "", a.action === "sweep-all" && Array.isArray(a.sweeps) ? sweepAllBlock(a) : "", a.action === "triage" && Array.isArray(a.steps) && a.steps.length ? planBlock(id, a) : ""))))))),
     items.length > 10 ? h("div", { class: "note", style: "margin-top:6px" }, items.length >= 40 ? "The latest 40 actions. Scroll the table for more." : `${items.length} actions. Scroll the table for more.`) : "");
 }
 // Each PR in a Ship all request, with what happened to it once Claude reports back.
@@ -880,6 +885,26 @@ function shipAllBlock(a) {
     return h("li", {}, pill(out || waiting, out ? OUTCOME_C[out] : "var(--muted)"),
       /^https:\/\//.test(p.url || "") ? h("a", { href: p.url, target: "_blank", rel: "noopener" }, `${p.repo.split("/").pop()}#${p.pr}`) : `${p.repo}#${p.pr}`,
       r?.why ? h("span", { class: "sub" }, r.why) : "");
+  }));
+}
+// Each repo in a Sweep all request, with the packages it was asked to clear and what happened there.
+const SWEEP_C = { "pr-opened": "var(--good)", "already-open": "var(--accent)", "already-fixed": "var(--muted)", skipped: "var(--warn)", failed: "var(--bad)" };
+const SWEEP_L = { "pr-opened": "PR opened", "already-open": "PR already open", "already-fixed": "already fixed", skipped: "skipped", failed: "failed" };
+const shortRepo = (full) => (D?.owner && full.startsWith(`${D.owner}/`) ? full.slice(D.owner.length + 1) : full);
+function sweepTargets(sweeps) {
+  const by = new Map();
+  for (const s of sweeps) for (const r of s.repos || []) { if (!by.has(r)) by.set(r, []); by.get(r).push(s.pkg); }
+  return [...by.entries()];
+}
+function sweepAllBlock(a) {
+  const res = Array.isArray(a.results) ? a.results : [];
+  const waiting = a.status === "done" || a.status === "stopped" ? "not reported" : a.status === "running" ? "in progress" : "waiting";
+  return h("ul", { class: "shipres" }, sweepTargets(a.sweeps).map(([repo, pkgs]) => {
+    const r = res.find((x) => x && x.repo === repo);
+    const out = r?.outcome && SWEEP_C[r.outcome] ? r.outcome : null;
+    return h("li", {}, pill(out ? SWEEP_L[out] : waiting, out ? SWEEP_C[out] : "var(--muted)"),
+      /^https:\/\//.test(r?.url || "") ? h("a", { href: r.url, target: "_blank", rel: "noopener" }, shortRepo(repo)) : h("span", {}, shortRepo(repo)),
+      h("span", { class: "sub" }, pkgs.join(", ")), r?.why ? h("span", { class: "sub" }, `· ${r.why}`) : "");
   }));
 }
 function noteBlock(t) {
@@ -1021,6 +1046,30 @@ function confirmShipAll(ready, notReady) {
     notReady.length ? h("div", { class: "note" }, `Left out: ${notReady.length} ${notReady.length === 1 ? "PR" : "PRs"} that ${notReady.length === 1 ? "was" : "were"} a draft or not green this morning.`) : "",
     h("div", { class: "note" }, "CI is from this morning's read. Claude checks each PR again just before merging it."),
     owner ? "" : h("div", { class: "status err" }, "Only the dashboard's owner can ship."),
+    h("div", { class: "acts" }, go, h("button", { class: "btn ghost", onclick: closeDrawer }, "Cancel")), status));
+}
+// Sweep all: one request listing every package in view and its repos. Claude works repo by repo, so each
+// repo gets one PR that clears all of its listed packages, after checking the alerts are still open.
+function confirmSweepAll(pk) {
+  if (!pk.length) return;
+  const status = h("div", { class: "status" });
+  const owner = isOwner();
+  const sweeps = pk.map((p) => ({ pkg: p.pkg, ecosystem: p.ecosystem, repos: p.repos.map(fullOf).filter((r) => !STEWARD.includes(r)) })).filter((s) => s.repos.length);
+  const held = [...new Set(pk.flatMap((p) => p.repos.map(fullOf)).filter((r) => STEWARD.includes(r)))];
+  const targets = sweepTargets(sweeps);
+  const n = sweeps.length, m = targets.length;
+  const go = h("button", { class: "btn primary", disabled: !owner || !m }, `Sweep ${m} ${m === 1 ? "repo" : "repos"}`);
+  go.addEventListener("click", () => fire({ action: "sweep-all", repo: null, sweeps, label: `Sweep all (${n} ${n === 1 ? "package" : "packages"}, ${m} repos)` }, go, status));
+  drawer(h("div", { class: "confirm" }, h("div", { class: "eyebrow" }, "Sweep all"), h("h3", {}, `Sweep ${n} ${n === 1 ? "package" : "packages"} across ${m} ${m === 1 ? "repo" : "repos"}?`),
+    h("ol", { class: "shiplist", "aria-label": "Repos to sweep" }, targets.map(([repo, pkgs]) => h("li", {}, h("b", { class: "nowrap" }, shortRepo(repo)), h("span", { class: "tt" }, pkgs.join(", "))))),
+    h("ul", {},
+      h("li", {}, "One PR per repo that clears all of that repo's listed packages, so PRs don't fight over the same lockfile"),
+      h("li", {}, "Before each repo, Claude checks the alerts are still open and that no open PR already covers them; if so it links that PR or says it's already fixed"),
+      h("li", {}, "Same rules as Sweep: releases at least 3 days old, majors and 0.x minors deferred and listed"),
+      h("li", {}, "Opens PRs and stops. Nothing merges; ship them from Ready to ship when they're green"),
+      h("li", {}, "Runs as one long task. Each repo's result shows under In flight as it goes")),
+    held.length ? h("div", { class: "note" }, `Left out: ${held.join(", ")}, which ${held.length === 1 ? "runs" : "run"} under /steward-maintain.`) : "",
+    owner ? "" : h("div", { class: "status err" }, "Only the dashboard's owner can sweep everything at once."),
     h("div", { class: "acts" }, go, h("button", { class: "btn ghost", onclick: closeDrawer }, "Cancel")), status));
 }
 async function fire(req, btn, status) {
