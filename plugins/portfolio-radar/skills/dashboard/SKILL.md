@@ -70,4 +70,4 @@ To refresh, publish again to the same URL with the new `data.json`. Never change
 
 ## Rules for the buttons
 
-Every hand-off follows the `handoff-rules` skill: open a PR and stop. Only Ship it merges, only for the owner, only if the head is unchanged and every check is green now.
+Every hand-off follows the `handoff-rules` skill: open a PR and stop. Only Ship it and Ship all merge, only for the owner, only if the head is unchanged and every check is green now. Ship all lists every PR in a confirmation first and reports each PR's result (merged, skipped and why, or failed) under In flight.

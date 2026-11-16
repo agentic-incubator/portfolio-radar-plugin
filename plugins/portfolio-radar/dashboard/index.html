@@ -166,6 +166,14 @@ th .sort:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 td .since{display:block;color:var(--muted);font-size:11px}
 tr:last-child td{border-bottom:0}
+.tblbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;margin-bottom:8px}
+.tblbar .sub{color:var(--muted);font-size:12px}
+.shiplist{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;max-height:340px;overflow:auto;padding-right:4px}
+.shiplist li{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;min-width:0}
+.shiplist .tt{flex:1 1 220px;min-width:0;color:var(--fg)}
+.shiplist code{font-size:11px}
+.shipres{margin:6px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;font-size:12px}
+.shipres li{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px}
 td .sub{color:var(--muted);font-size:12px}
 
 /* Patterns */
@@ -251,7 +259,7 @@ code{font:12.5px var(--f-mono);background:var(--bg);border:1px solid var(--line)
 "use strict";
 document.getElementById("js-note")?.remove();
 // Bumped with the plugin manifests; a test keeps them in step.
-const PLUGIN_VERSION = "0.7.0";
+const PLUGIN_VERSION = "0.8.0";
 // Per-person settings come from config.json next to data.json, written by /radar-dashboard. Nothing personal is in this file.
 const DEFAULTS = { ownerName: "you", triggerId: null, steward: false, stewardRepos: [], preferRenovate: false, radarRepo: "", runsWhere: "a new Claude Code task" };
 let CFG = { ...DEFAULTS };
@@ -605,17 +613,63 @@ function renderNeeds() {
 function checksPill(c) {
   return { green: pill("CI green", "var(--good)"), red: pill("CI red", "var(--bad)"), pending: pill("CI running", "var(--warn)"), none: pill("no CI runs", "var(--muted)"), unknown: pill("CI unknown", "var(--muted)") }[c] || pill("CI not read", "var(--muted)");
 }
+// ---------- sortable tables ----------
+// Every table sorts by clicking a column header; clicking it again flips the order. Unknown values sort
+// last either way. Each table remembers its choice. A column without `v` (buttons) doesn't sort.
+function sortState(id, key, dir) {
+  return { id, key: store.get(`pr.${id}.sort`) || key, dir: (store.get(`pr.${id}.dir`) || dir) === "asc" ? "asc" : "desc" };
+}
+function sortRows(rows, cols, st, tie) {
+  const col = cols.find((c) => c.k === st.key && c.v) || cols.find((c) => c.v);
+  return [...rows].sort((a, b) => {
+    const x = col.v(a), y = col.v(b);
+    if (x == null && y == null) return tie(a, b);
+    if (x == null) return 1; if (y == null) return -1;
+    const c = typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y));
+    return (st.dir === "asc" ? c : -c) || tie(a, b);
+  });
+}
+function sortHead(cols, st, rerender) {
+  const col = cols.find((c) => c.k === st.key && c.v) || cols.find((c) => c.v);
+  return h("tr", {}, cols.map((c) => {
+    if (!c.v) return h("th", { class: c.num ? "num" : null }, c.label || "");
+    const on = c === col;
+    return h("th", { class: c.num ? "num" : null, "aria-sort": on ? (st.dir === "asc" ? "ascending" : "descending") : null },
+      h("button", { class: "sort", onclick: () => {
+        if (on) st.dir = st.dir === "asc" ? "desc" : "asc"; else { st.key = c.k; st.dir = c.first || "asc"; }
+        store.set(`pr.${st.id}.sort`, st.key); store.set(`pr.${st.id}.dir`, st.dir); rerender();
+      } }, c.label, on ? (st.dir === "asc" ? " ▲" : " ▼") : ""));
+  }));
+}
+
+// ---------- ready to ship ----------
+const isReady = (p) => !p.draft && p.checks === "green";
+const CI_ORDER = { green: 0, pending: 1, red: 2, none: 3, unknown: 4 };
+const shipSort = sortState("ship", "ci", "asc");
+const SHIP_COLS = [
+  { k: "repo", label: "Repo", v: ({ r }) => r.name.toLowerCase() },
+  { k: "pr", label: "PR", v: ({ p }) => (p.title || "").toLowerCase() },
+  { k: "opened", label: "Opened", first: "desc", v: ({ p }) => p.created || null },
+  { k: "ci", label: "CI", v: ({ p }) => (p.draft ? 9 : CI_ORDER[p.checks] ?? 5) },
+  { k: "act", label: "" },
+];
 function renderShip() {
-  const rows = [];
-  for (const r of visible()) for (const p of r.humanPrs) rows.push({ r, p });
-  rows.sort((a, b) => (b.p.checks === "green") - (a.p.checks === "green") || (a.p.draft - b.p.draft) || new Date(a.p.created) - new Date(b.p.created));
-  if (!rows.length) return $("ship").replaceChildren(h("div", { class: "empty" }, "No PRs from people in this view."));
+  const all = [];
+  for (const r of visible()) for (const p of r.humanPrs) all.push({ r, p });
+  if (!all.length) return $("ship").replaceChildren(h("div", { class: "empty" }, "No PRs from people in this view."));
+  // Ties keep the oldest PR first, so the default (CI green first) matches what the page always showed.
+  const rows = sortRows(all, SHIP_COLS, shipSort, (a, b) => new Date(a.p.created) - new Date(b.p.created) || a.r.name.localeCompare(b.r.name));
+  const ready = rows.filter(({ p }) => isReady(p));
   const tb = h("tbody", {}, rows.map(({ r, p }) => h("tr", {},
     h("td", {}, h("button", { class: "repo-link", onclick: () => openRepo(r) }, r.name)),
-    h("td", {}, h("a", { href: p.url, target: "_blank", rel: "noopener" }, `#${p.number} `), p.title, h("div", { class: "sub" }, `${p.author} · opened ${ago(p.created)}${p.draft ? " · draft" : ""}`)),
+    h("td", {}, h("a", { href: p.url, target: "_blank", rel: "noopener" }, `#${p.number} `), p.title, h("div", { class: "sub" }, `${p.author}${p.draft ? " · draft" : ""}`)),
+    h("td", { class: "mono nowrap" }, ago(p.created)),
     h("td", {}, p.draft ? pill("draft", "var(--muted)") : checksPill(p.checks)),
-    h("td", {}, !p.draft && p.checks === "green" ? shipBtn(r, p) : link(p.url, "Review ↗")))));
-  $("ship").replaceChildren(h("div", { class: "tbl" }, h("table", {}, h("thead", {}, h("tr", {}, h("th", {}, "Repo"), h("th", {}, "PR"), h("th", {}, "CI"), h("th", {}, ""))), tb)));
+    h("td", {}, isReady(p) ? shipBtn(r, p) : link(p.url, "Review ↗")))));
+  const shipAllBtn = h("button", { class: "btn ship", disabled: !ready.length, title: ready.length ? null : "No PR in this view had green CI this morning" }, ready.length ? `Ship all (${ready.length})` : "Ship all");
+  shipAllBtn.addEventListener("click", () => confirmShipAll(ready, rows.filter(({ p }) => !isReady(p))));
+  const bar = h("div", { class: "tblbar" }, h("span", { class: "sub" }, `${ready.length} of ${rows.length} green · click a column to sort`), shipAllBtn);
+  $("ship").replaceChildren(bar, h("div", { class: "tbl" }, h("table", {}, h("thead", {}, sortHead(SHIP_COLS, shipSort, renderShip)), tb)));
 }
 
 function renderPatterns() {
@@ -633,19 +687,26 @@ function renderPatterns() {
 const fullOf = (name) => (name.includes("/") ? name : `${D.owner}/${name}`);
 const byName = (name) => D.repos.find((r) => r.name === name || r.fullName === name);
 
+const botSort = sortState("bots", "bots", "desc");
+const BOT_COLS = [
+  { k: "repo", label: "Repo", v: (r) => r.name.toLowerCase() },
+  { k: "updater", label: "Updater", v: (r) => r.updaters.tools.join(" + ") },
+  { k: "bots", label: "Bot PRs", first: "desc", v: (r) => r.botPrs.renovate + r.botPrs.dependabot },
+  { k: "act", label: "" },
+];
 function renderBots() {
   $("bots-sub").textContent = CFG.preferRenovate ? "Moving everything to Renovate. Dependabot alerts stay on; Dependabot's update PRs retire." : "Which repos get dependency updates from Renovate, Dependabot, both or neither.";
   const u = D.updaters || { renovate: [], dependabot: [], both: [], none: [] };
   const inView = (list) => list.map(byName).filter(Boolean).filter((r) => visible().includes(r));
   const parts = [["renovate", "Renovate", "var(--ok)"], ["both", "Both", "var(--ci)"], ["dependabot", "Dependabot", "var(--critical)"], ["none", "Neither", "var(--stale)"]].map(([k, l, c]) => [k, l, c, inView(u[k] || [])]);
   const total = parts.reduce((n, p) => n + p[3].length, 0) || 1;
-  const migrate = [...parts[1][3], ...parts[2][3]].sort((a, b) => (b.botPrs.dependabot - a.botPrs.dependabot));
+  const migrate = sortRows([...parts[1][3], ...parts[2][3]], BOT_COLS, botSort, (a, b) => b.botPrs.dependabot - a.botPrs.dependabot || a.name.localeCompare(b.name));
   const kids = [
     h("div", { class: "split", role: "img", "aria-label": parts.map((p) => `${p[1]} ${p[3].length}`).join(", ") }, parts.filter((p) => p[3].length).map(([k, l, c, rs]) => h("div", { style: `flex:${rs.length};background:${c}`, title: `${l}: ${rs.length}` }, rs.length / total > 0.07 ? `${l} ${rs.length}` : rs.length))),
     h("p", { class: "note" }, `${migrate.length} repos still get Dependabot update PRs. Moving one to Renovate adds a Renovate config, turns off Dependabot version updates, and keeps Dependabot alerts on. Renovate respects the 3-day release-age gate.`),
   ];
   if (migrate.length) {
-    kids.push(h("div", { class: "tbl" }, h("table", {}, h("thead", {}, h("tr", {}, h("th", {}, "Repo"), h("th", {}, "Updater"), h("th", {}, "Bot PRs"), h("th", {}, ""))),
+    kids.push(h("div", { class: "tbl" }, h("table", {}, h("thead", {}, sortHead(BOT_COLS, botSort, renderBots)),
       h("tbody", {}, migrate.slice(0, renderBots.all ? 999 : 12).map((r) => h("tr", {},
         h("td", {}, h("button", { class: "name btn ghost", style: "padding:2px 6px", onclick: () => openRepo(r) }, r.name)),
         h("td", {}, r.updaters.tools.join(" + ")),
@@ -751,8 +812,10 @@ function renderMetrics() {
     return;
   }
   const cols = METRIC_COLS.filter((c) => !c.opt || rs.some((r) => c.v(r.metrics) != null));
-  const col = cols.find((c) => c.k === metricsSort) || cols[0];
+  const NAME = { k: "name", label: "Repo", v: () => null };
+  const col = metricsSort === "name" ? NAME : cols.find((c) => c.k === metricsSort) || cols[0];
   const sorted = [...rs].sort((a, b) => {
+    if (col === NAME) { const c = a.name.localeCompare(b.name); return metricsDir === "asc" ? c : -c; }
     const x = col.v(a.metrics), y = col.v(b.metrics);
     if (x == null && y == null) return a.name.localeCompare(b.name);
     if (x == null) return 1; if (y == null) return -1; // unknowns last either way
@@ -761,8 +824,8 @@ function renderMetrics() {
   });
   const weekly = rs.map((r) => r.metrics.weeklyAt).filter(Boolean).sort().at(-1);
   $("metrics-sub").textContent = `Forks, merged PRs and lines of code measured weekly${weekly ? ` (last ${weekly})` : ""}; the rest daily. Downloads are release files plus packages that point back to the repo. "?" couldn't be read, "-" nothing to download. Click a column to sort.`;
-  const head = h("tr", {}, h("th", {}, "Repo"), cols.map((c) => h("th", { class: c.num ? "num" : null, "aria-sort": c === col ? (metricsDir === "asc" ? "ascending" : "descending") : null },
-    h("button", { class: "sort", onclick: () => { if (metricsSort === c.k) metricsDir = metricsDir === "asc" ? "desc" : "asc"; else { metricsSort = c.k; metricsDir = "desc"; } store.set("pr.msort", metricsSort); store.set("pr.mdir", metricsDir); renderMetrics(); } }, c.label, c === col ? (metricsDir === "asc" ? " ▲" : " ▼") : ""))));
+  const head = h("tr", {}, [NAME, ...cols].map((c) => h("th", { class: c.num ? "num" : null, "aria-sort": c === col ? (metricsDir === "asc" ? "ascending" : "descending") : null },
+    h("button", { class: "sort", onclick: () => { if (metricsSort === c.k) metricsDir = metricsDir === "asc" ? "desc" : "asc"; else { metricsSort = c.k; metricsDir = c === NAME ? "asc" : "desc"; } store.set("pr.msort", metricsSort); store.set("pr.mdir", metricsDir); renderMetrics(); } }, c.label, c === col ? (metricsDir === "asc" ? " ▲" : " ▼") : ""))));
   const rows = sorted.slice(0, renderMetrics.all ? 9999 : 25).map((r) => h("tr", {},
     h("td", {}, h("button", { class: "name btn ghost", style: "padding:2px 6px", onclick: () => openRepo(r) }, r.name)),
     cols.map((c) => {
@@ -803,8 +866,21 @@ function renderFlight(err) {
     h("tbody", {}, items.map(([id, a]) => h("tr", {}, h("td", { class: "mono nowrap" }, a.requestedAt ? new Date(a.requestedAt).toLocaleString([], { dateStyle: "short", timeStyle: "short" }) : "–"),
       h("td", { class: "nowrap" }, a.label || a.action), h("td", {}, a.repo ? h("span", { class: "repo-cell", title: a.repo }, a.repo) : "–"),
       h("td", {}, h("div", { class: "fstat" }, h("div", { class: "fline" }, pill(a.status || "sent", stC[a.status] || "var(--warn)"), a.fromPlan ? h("span", { class: "sub" }, "From an approved plan") : "", a.resultUrl ? h("a", { href: a.resultUrl, target: "_blank", rel: "noopener" }, "Result ↗") : ""),
-        a.resultNote ? noteBlock(a.resultNote) : "", a.action === "triage" && Array.isArray(a.steps) && a.steps.length ? planBlock(id, a) : ""))))))),
+        a.resultNote ? noteBlock(a.resultNote) : "", a.action === "ship-all" && Array.isArray(a.prs) ? shipAllBlock(a) : "", a.action === "triage" && Array.isArray(a.steps) && a.steps.length ? planBlock(id, a) : ""))))))),
     items.length > 10 ? h("div", { class: "note", style: "margin-top:6px" }, items.length >= 40 ? "The latest 40 actions. Scroll the table for more." : `${items.length} actions. Scroll the table for more.`) : "");
+}
+// Each PR in a Ship all request, with what happened to it once Claude reports back.
+const OUTCOME_C = { merged: "var(--good)", skipped: "var(--warn)", failed: "var(--bad)" };
+function shipAllBlock(a) {
+  const res = Array.isArray(a.results) ? a.results : [];
+  const waiting = a.status === "done" || a.status === "stopped" ? "not reported" : a.status === "running" ? "in progress" : "waiting";
+  return h("ul", { class: "shipres" }, a.prs.map((p) => {
+    const r = res.find((x) => x && x.repo === p.repo && Number(x.pr) === Number(p.pr));
+    const out = r?.outcome && OUTCOME_C[r.outcome] ? r.outcome : null;
+    return h("li", {}, pill(out || waiting, out ? OUTCOME_C[out] : "var(--muted)"),
+      /^https:\/\//.test(p.url || "") ? h("a", { href: p.url, target: "_blank", rel: "noopener" }, `${p.repo.split("/").pop()}#${p.pr}`) : `${p.repo}#${p.pr}`,
+      r?.why ? h("span", { class: "sub" }, r.why) : "");
+  }));
 }
 function noteBlock(t) {
   const short = t.slice(0, 200).replace(/\s+\S*$/, "") + "…";
@@ -922,6 +998,30 @@ function confirmShip(r, p) {
     h("div", { class: "note" }, `CI from this morning's read: ${p.checks}. Claude checks it again before merging.`),
     owner ? "" : h("div", { class: "status err" }, "Only the dashboard's owner can ship."),
     h("div", { class: "acts" }, go, link(p.url, "Review PR ↗"), h("button", { class: "btn ghost", onclick: closeDrawer }, "Cancel")), status));
+}
+// Ship all: one request listing every PR that was green this morning. Claude ships them one at a time
+// with the same checks as Ship it, skips any that changed or aren't green now, and reports each one.
+function confirmShipAll(ready, notReady) {
+  if (!ready.length) return;
+  const status = h("div", { class: "status" });
+  const owner = isOwner();
+  const n = ready.length, many = n === 1 ? "PR" : "PRs";
+  const go = h("button", { class: "btn ship", disabled: !owner }, `Ship ${n} ${many}`);
+  const prs = ready.map(({ r, p }) => ({ repo: r.fullName, pr: p.number, headSha: p.headSha, title: p.title, url: p.url }));
+  go.addEventListener("click", () => fire({ action: "ship-all", repo: null, prs, label: `Ship all (${n} ${many})` }, go, status));
+  const sameRepo = Object.values(prs.reduce((m, x) => ((m[x.repo] = (m[x.repo] || 0) + 1), m), {})).some((c) => c > 1);
+  drawer(h("div", { class: "confirm shipit" }, h("div", { class: "eyebrow" }, "Ship all"), h("h3", {}, `Ship ${n} green ${many}?`),
+    h("ol", { class: "shiplist", "aria-label": "PRs to ship" }, ready.map(({ r, p }) => h("li", {}, h("b", { class: "nowrap" }, r.name), h("a", { href: p.url, target: "_blank", rel: "noopener" }, `#${p.number}`), h("span", { class: "tt" }, p.title), h("code", {}, (p.headSha || "").slice(0, 7))))),
+    h("ul", {},
+      h("li", {}, `Counts as your "ship it" for these ${n} ${many} only, in the order shown`),
+      h("li", {}, "Each merges only if its head is still the commit shown and every check is green now. Any that isn't is skipped, and Claude says why"),
+      h("li", {}, "Squash-merges each one and deletes its branch"),
+      sameRepo ? h("li", {}, "Two PRs in one repo: once the first merges, the second can need a rebase; if GitHub won't merge it as it is, it's skipped") : "",
+      h("li", {}, "Merges can't be undone. Each result shows under In flight")),
+    notReady.length ? h("div", { class: "note" }, `Left out: ${notReady.length} ${notReady.length === 1 ? "PR" : "PRs"} that ${notReady.length === 1 ? "was" : "were"} a draft or not green this morning.`) : "",
+    h("div", { class: "note" }, "CI is from this morning's read. Claude checks each PR again just before merging it."),
+    owner ? "" : h("div", { class: "status err" }, "Only the dashboard's owner can ship."),
+    h("div", { class: "acts" }, go, h("button", { class: "btn ghost", onclick: closeDrawer }, "Cancel")), status));
 }
 async function fire(req, btn, status) {
   const requestId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
