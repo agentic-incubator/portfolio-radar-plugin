@@ -20,6 +20,7 @@ Lives at the root of the person's private radar repo. It's theirs: `/radar-updat
 | `ignoreRepos` | Repo names to skip | `[]` |
 | `noise` | `{ "archived": true, "forks": true }` | both `true` |
 | `activeForks` | Forks that are really their own work | `[]` |
+| `metrics` | Optional (engine 0.5.0+). `enabled`, `weekday` (UTC, 1 = Monday) for the weekly fields, `activeForkMonths`, `loc` (weekly shallow clone to count lines of code, about 10 to 15 Actions minutes a week for 120 repos), `packages` (`{ "repo": ["npm:name", "crates:name", "pypi:name", "dockerhub:ns/repo"] }` for packages the radar can't find itself), `ignorePackages` | Leave it out: everything on, Monday, 6 months. Write `{ "loc": false }` only if they turn line counts off |
 
 ## Checks before writing
 

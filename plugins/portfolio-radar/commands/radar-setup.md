@@ -43,6 +43,9 @@ Ask which to watch (default: all), and for consultants which are clients. A clie
 ### 5. goals — optional
 "Are any repos tied to a deadline, like a launch or a demo? You can skip this." Collect goal name → repo names. Use the `radar-config` skill to write them.
 
+### 5b. metrics — optional
+"Each day the radar also records stars, forks, open issues, PRs closed and downloads for each repo. Once a week it counts lines of code by making a quick copy of each repo, which uses about 10 to 15 minutes of GitHub Actions time a week for 100 or so repos. Keep line counts on?" Default **yes**. On no, the `radar-config` skill writes `"metrics": { "loc": false }`. If they publish packages the radar can't link to a repo (a monorepo's members, a Docker Hub image), offer to list them under `metrics.packages`.
+
 ### 6. repo — make their private radar repo
 Default name `<login>/portfolio-radar` (or `<team org>/portfolio-radar` for product teams). Check it doesn't exist (`gh repo view`); if it does, ask whether to use it or pick a new name. Never overwrite.
 Create it on yes:

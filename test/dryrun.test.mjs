@@ -79,3 +79,20 @@ test("dashboard footer carries the credit line and a plugin version that matches
   assert.equal(v, JSON.parse(readFileSync(".claude-plugin/marketplace.json", "utf8")).plugins.find((p) => p.name === "portfolio-radar").version);
   assert.match(html, /version not reported/, "a missing engine version is named, never blank");
 });
+
+test("dashboard has a metrics section that never shows unread values as zero", () => {
+  const html = readFileSync(`${P}/dashboard/index.html`, "utf8");
+  assert.match(html, /id="s-metrics"/);
+  assert.match(html, /function renderMetrics\(\)/);
+  assert.match(html, /renderMetrics\(\);/, "render() calls it");
+  assert.match(html, /const mnum = \(n\) => \(n == null \? "\?"/, "null renders as ?, not 0");
+  assert.match(html, /Metrics come with radar engine 0\.5\.0/, "an older engine is named, not blank");
+  const sample = JSON.parse(readFileSync(`${P}/dashboard/sample-data.json`, "utf8"));
+  assert.ok(sample.repos.some((r) => r.metrics), "sample data shows the metrics table");
+  assert.ok(sample.repos.some((r) => !r.metrics), "and a repo without metrics");
+});
+
+test("setup asks about line counts and the config skill documents metrics", () => {
+  assert.match(readFileSync(`${P}/commands/radar-setup.md`, "utf8"), /### 5b\. metrics/);
+  assert.match(readFileSync(`${P}/skills/radar-config/SKILL.md`, "utf8"), /`metrics`/);
+});

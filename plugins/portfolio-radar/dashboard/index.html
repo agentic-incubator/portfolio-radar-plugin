@@ -141,6 +141,10 @@ details.fnote p{margin:0}
 table{border-collapse:collapse;width:100%;min-width:640px}
 th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
 th{font:600 11px var(--f-display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);background:var(--panel)}
+th .sort{all:unset;cursor:pointer;white-space:nowrap}
+th .sort:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+td .since{display:block;color:var(--muted);font-size:11px}
 tr:last-child td{border-bottom:0}
 td .sub{color:var(--muted);font-size:12px}
 
@@ -211,6 +215,7 @@ code{font:12.5px var(--f-mono);background:var(--bg);border:1px solid var(--line)
   <section id="s-clients"><div class="sh"><h2>Clients</h2><p>Repos in client orgs.</p></div><div id="clients"></div></section>
   <section id="s-noise"><div class="sh"><h2>Noise</h2><p>Archived repos and forks that still raise alerts or bot PRs. Kept apart so they don't bury real work.</p></div><div id="noise"></div></section>
   <section id="s-drift"><div class="sh"><h2>Drift</h2><p>Not urgent, but it piles up.</p></div><div id="drift"></div></section>
+  <section id="s-metrics"><div class="sh"><h2>Metrics</h2><p id="metrics-sub">Stars, forks, issues, PRs, lines of code and downloads per repo. Click a column to sort.</p></div><div id="metrics"></div></section>
   <section id="s-flight"><div class="sh"><h2>In flight</h2><p>What you've handed to Claude from here. Each one runs as its own Claude Code task. A triage plan lists its steps here for you to approve one at a time or all at once.</p></div><div id="flight"></div></section>
   <section id="s-gaps"><div class="sh"><h2>Couldn't check</h2><p>Gaps in today's read. A gap is never shown as zero.</p></div><div id="gaps"></div></section>
 </main>
@@ -225,7 +230,7 @@ code{font:12.5px var(--f-mono);background:var(--bg);border:1px solid var(--line)
 "use strict";
 document.getElementById("js-note")?.remove();
 // Bumped with the plugin manifests; a test keeps them in step.
-const PLUGIN_VERSION = "0.5.0";
+const PLUGIN_VERSION = "0.6.0";
 // Per-person settings come from config.json next to data.json, written by /radar-dashboard. Nothing personal is in this file.
 const DEFAULTS = { ownerName: "you", triggerId: null, steward: false, stewardRepos: [], preferRenovate: false, radarRepo: "", runsWhere: "a new Claude Code task" };
 let CFG = { ...DEFAULTS };
@@ -323,7 +328,7 @@ function render() {
   // An older engine doesn't write its version: say so rather than guess.
   $("versions").textContent = `plugin v${PLUGIN_VERSION} · engine ${D.engine ? `v${D.engine}` : "version not reported (update with /radar-update)"}`;
   renderFilters(); renderLegend(); renderVitals(); renderMoves(); drawRadar();
-  renderNeeds(); renderShip(); renderPatterns(); renderBots(); renderGoals(); renderClients(); renderNoise(); renderDrift(); renderFlight(); renderGaps();
+  renderNeeds(); renderShip(); renderPatterns(); renderBots(); renderGoals(); renderClients(); renderNoise(); renderDrift(); renderMetrics(); renderFlight(); renderGaps();
 }
 
 function renderFilters() {
@@ -627,6 +632,63 @@ function renderDrift() {
     block("Quiet 90+ days", "Archive it, or note why it's parked.", stale.map((r) => h("div", { class: "row" }, h("button", { class: "name", onclick: () => openRepo(r) }, r.name), h("span", { class: "mono muted", style: "font-size:11px" }, `${r.staleDays}d`), link(`${r.url}/settings`, "Archive ↗", "btn ghost")))),
     block("No AGENTS.md", "Agents working there have no rules to follow.", noAgents.map((r) => h("div", { class: "row" }, h("button", { class: "name", onclick: () => openRepo(r) }, r.name), handoffBtn(r, "add-agents-md", "Add AGENTS.md")))),
     block("PRs quiet 30+ days", "Close, finish or hand off.", quietPrs.map(({ r, p }) => h("div", { class: "quiet" }, h("a", { href: p.url, target: "_blank", rel: "noopener", title: `${r.name}#${p.number}` }, `${r.name}#${p.number}`), h("span", { class: "muted" }, p.title))))));
+}
+
+// ---------- metrics (engine 0.5.0+) ----------
+// Unknown is "?" and never 0; "-" means the repo ships nothing countable; a window that isn't full says since when.
+let metricsSort = store.get("pr.msort") || "stars";
+let metricsDir = store.get("pr.mdir") === "asc" ? "asc" : "desc";
+const mnum = (n) => (n == null ? "?" : Number(n).toLocaleString());
+const shortDay = (d) => new Date(`${d}T00:00:00Z`).toLocaleDateString([], { month: "short", day: "numeric", timeZone: "UTC" });
+function dlCell(m, k) {
+  const dl = m.downloads;
+  if (!dl) return ["?", null];
+  if (!dl.sources?.length) return ["-", null];
+  if (dl[k] == null) return ["?", null];
+  return [mnum(dl[k]), dl.partialSince?.[k] ? `since ${shortDay(dl.partialSince[k])}` : null];
+}
+const METRIC_COLS = [
+  { k: "stars", label: "Stars", num: true, v: (m) => m.stars },
+  { k: "forks", label: "Forks active / all", num: true, v: (m) => m.forks?.active, cell: (m) => `${mnum(m.forks?.active)} / ${mnum(m.forks?.total)}` },
+  { k: "issues", label: "Open issues", num: true, v: (m) => m.openIssues },
+  { k: "prs", label: "PRs closed (merged)", num: true, v: (m) => m.prsClosed, cell: (m) => `${mnum(m.prsClosed)} (${mnum(m.prsMerged)})` },
+  { k: "loc", label: "Lines of code", num: true, v: (m) => m.loc?.total, opt: true, title: (m) => (m.loc?.byLanguage ? Object.entries(m.loc.byLanguage).sort((a, b) => b[1] - a[1]).map(([l, n]) => `${l} ${n.toLocaleString()}`).join(", ") : null) },
+  { k: "d7", label: "Downloads 7d", num: true, v: (m) => m.downloads?.d7, dl: "d7" },
+  { k: "d30", label: "Downloads 30d", num: true, v: (m) => m.downloads?.d30, dl: "d30" },
+  { k: "d182", label: "Downloads 6mo", num: true, v: (m) => m.downloads?.d182, dl: "d182" },
+  { k: "last", label: "Last commit", v: (m) => m.lastCommit, cell: (m) => (m.lastCommit ? ago(m.lastCommit) : "?") },
+  { k: "created", label: "Created", v: (m) => m.created, cell: (m) => m.created?.slice(0, 10) ?? "?" },
+];
+const verAtLeast = (v, min) => { if (!v) return false; const a = String(v).split(".").map(Number), b = min.split(".").map(Number); for (let i = 0; i < 3; i++) if ((a[i] || 0) !== b[i]) return (a[i] || 0) > b[i]; return true; };
+function renderMetrics() {
+  const rs = visible().filter((r) => r.metrics);
+  if (!(D.repos || []).some((r) => r.metrics)) {
+    $("metrics").replaceChildren(h("div", { class: "empty" }, verAtLeast(D.engine, "0.5.0") ? "No metrics in today's data. They may be switched off (metrics.enabled in radar.config.json)." : "Metrics come with radar engine 0.5.0. Run /radar-update in your radar repo to get them; they appear after its next daily run."));
+    return;
+  }
+  const cols = METRIC_COLS.filter((c) => !c.opt || rs.some((r) => c.v(r.metrics) != null));
+  const col = cols.find((c) => c.k === metricsSort) || cols[0];
+  const sorted = [...rs].sort((a, b) => {
+    const x = col.v(a.metrics), y = col.v(b.metrics);
+    if (x == null && y == null) return a.name.localeCompare(b.name);
+    if (x == null) return 1; if (y == null) return -1; // unknowns last either way
+    const c = typeof x === "number" ? x - y : String(x).localeCompare(String(y));
+    return (metricsDir === "asc" ? c : -c) || a.name.localeCompare(b.name);
+  });
+  const weekly = rs.map((r) => r.metrics.weeklyAt).filter(Boolean).sort().at(-1);
+  $("metrics-sub").textContent = `Forks, merged PRs and lines of code measured weekly${weekly ? ` (last ${weekly})` : ""}; the rest daily. Downloads are release files plus packages that point back to the repo. "?" couldn't be read, "-" nothing to download. Click a column to sort.`;
+  const head = h("tr", {}, h("th", {}, "Repo"), cols.map((c) => h("th", { class: c.num ? "num" : null, "aria-sort": c === col ? (metricsDir === "asc" ? "ascending" : "descending") : null },
+    h("button", { class: "sort", onclick: () => { if (metricsSort === c.k) metricsDir = metricsDir === "asc" ? "desc" : "asc"; else { metricsSort = c.k; metricsDir = "desc"; } store.set("pr.msort", metricsSort); store.set("pr.mdir", metricsDir); renderMetrics(); } }, c.label, c === col ? (metricsDir === "asc" ? " ▲" : " ▼") : ""))));
+  const rows = sorted.slice(0, renderMetrics.all ? 9999 : 25).map((r) => h("tr", {},
+    h("td", {}, h("button", { class: "name btn ghost", style: "padding:2px 6px", onclick: () => openRepo(r) }, r.name)),
+    cols.map((c) => {
+      if (c.dl) { const [v, since] = dlCell(r.metrics, c.dl); return h("td", { class: "num mono" }, v, since ? h("span", { class: "since" }, since) : ""); }
+      return h("td", { class: c.num ? "num mono" : "mono nowrap", title: c.title?.(r.metrics) ?? null }, c.cell ? c.cell(r.metrics) : mnum(c.v(r.metrics)));
+    })));
+  const kids = [h("div", { class: "tbl" }, h("table", {}, h("thead", {}, head), h("tbody", {}, rows)))];
+  if (sorted.length > 25) kids.push(h("button", { class: "btn more", onclick: () => { renderMetrics.all = !renderMetrics.all; renderMetrics(); } }, renderMetrics.all ? "Show fewer" : `Show all ${sorted.length}`));
+  if (!rs.length) kids.splice(0, 1, h("div", { class: "empty" }, "No repos with metrics in this view."));
+  $("metrics").replaceChildren(...kids);
 }
 
 function renderFlight(err) {

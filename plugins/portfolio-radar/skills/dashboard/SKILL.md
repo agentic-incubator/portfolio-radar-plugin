@@ -19,6 +19,10 @@ The page detects what it has at run time, so the same file serves every tier.
 
 The footer shows the credit line, the plugin version (`PLUGIN_VERSION` in `index.html`, bumped with the manifests) and the engine version from `data.json`'s `engine` (engine 0.4.0 and later). With an older engine it says the version isn't reported and suggests `/radar-update`.
 
+## Metrics section
+
+With engine 0.5.0 or later, each repo in `data.json` carries `metrics`, and the page shows a Metrics table: stars, forks (active and all), open issues, PRs closed (merged), lines of code, downloads for 7 days, 30 days and 6 months, last commit and created date. Click a column to sort; the sort is remembered in the browser. "?" means unread (never 0), "-" means the repo ships nothing countable, and "since <date>" means a download window isn't full yet. The lines-of-code column is hidden when no repo has a count (`metrics.loc: false`). With an older engine the section says to run `/radar-update`. What each number means is in the template's `docs/how-it-works.md#metrics`.
+
 ## config.json
 
 ```json

@@ -43,7 +43,7 @@ Your copy is made from the template, not forked: a fork of a public repo has to 
 
 ## The dashboard
 
-A dark mission-control page: every repo as a dot on a radar scope (closer to the centre needs you sooner), vitals with 60-day sparklines, today's moves, and lanes for what needs you, what's ready to ship, one fix across many repos, bots, goals, clients, noise and drift. The footer shows the plugin and engine versions. It comes in three forms, and `/radar-dashboard` picks the best one your account supports:
+A dark mission-control page: every repo as a dot on a radar scope (closer to the centre needs you sooner), vitals with 60-day sparklines, today's moves, and lanes for what needs you, what's ready to ship, one fix across many repos, bots, goals, clients, noise and drift, plus a sortable Metrics table (stars, forks, issues, PRs closed, lines of code and downloads for each repo; radar engine 0.5.0 or later). The footer shows the plugin and engine versions. It comes in three forms, and `/radar-dashboard` picks the best one your account supports:
 
 | Form | Buttons |
 |---|---|
