@@ -18,10 +18,12 @@ A hand-off is any action that changes a repo: fold bot PRs, fix CI, add AGENTS.m
 - Never push to someone else's branch, rewrite history, or force-push the default branch.
 - Never close a Renovate PR by hand.
 - Never skip, disable or quarantine a test to get CI green.
-- Never delete branches, repos, files or releases except: Ship it deletes the merged PR's branch.
+- Never delete branches, repos, files or releases except: Ship it (and Ship all, per PR) deletes the merged PR's branch.
 - The radar's own GitHub App stays read-only. All writes go through the Claude app under the person's account.
 - Repos without the Claude app installed: stop and say "Install the Claude app on <owner> for buttons there" with https://github.com/apps/claude/installations/select_target.
 
 ## Ship it
 
 Squash-merge and delete the branch only when: the person who owns the dashboard pressed it, the PR head is the same commit the dashboard showed, and every check on that head is green now. Otherwise stop and say which condition failed. Pass the commit message explicitly so no AI co-author trailer is added.
+
+Ship all is Ship it run on each PR the person confirmed in its list, one at a time, with every condition checked per PR just before its merge. A PR that fails a condition is skipped and reported; the rest go on.

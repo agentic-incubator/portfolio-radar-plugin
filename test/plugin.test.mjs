@@ -132,3 +132,33 @@ test("built dashboard has data and config inline before the page script", () => 
   const cfg = out.indexOf('id="radar-config"'), data = out.indexOf('id="radar-data"'), page = out.indexOf("<script>");
   assert.ok(cfg > 0 && data > cfg && page > data);
 });
+
+test("every dashboard table has sortable column headers", () => {
+  const html = readFileSync(`${P}/dashboard/index.html`, "utf8");
+  // Each table's header row is built by sortHead() or has its own sort buttons (In flight).
+  const tables = html.split('h("table"').slice(1);
+  assert.ok(tables.length >= 4, "expected the Ready to ship, bots, metrics and In flight tables");
+  for (const t of tables) {
+    const head = t.slice(0, t.indexOf('h("tbody"') > 0 ? t.indexOf('h("tbody"') : 400);
+    assert.match(head, /sortHead\(|head\b/, `a table's header isn't sortable: ${head.slice(0, 120)}`);
+  }
+  assert.ok(!/h\("th", \{\}, "(Repo|PR|CI|Updater|Bot PRs)"\)/.test(html), "a table still has a plain, unsortable header");
+});
+
+test("every action the dashboard queues is handled by /radar-actions", () => {
+  const html = readFileSync(`${P}/dashboard/index.html`, "utf8");
+  const doc = readFileSync(`${P}/commands/radar-actions.md`, "utf8");
+  const actions = new Set([...html.matchAll(/action: "([a-z-]+)"/g), ...html.matchAll(/handoffBtn\([^,]+, "([a-z-]+)"/g)].map((m) => m[1]));
+  for (const a of ["ship-it", "ship-all"]) assert.ok(actions.has(a), `dashboard should queue ${a}`);
+  for (const a of actions) assert.ok(doc.includes(`\`${a}\``), `/radar-actions doesn't handle ${a}`);
+});
+
+test("Ship all asks first and lists each PR it will merge", () => {
+  const html = readFileSync(`${P}/dashboard/index.html`, "utf8");
+  const fn = html.slice(html.indexOf("function confirmShipAll"), html.indexOf("async function fire"));
+  assert.match(fn, /drawer\(/, "Ship all must open a confirmation");
+  assert.match(fn, /ready\.map\(/, "the confirmation lists every PR");
+  assert.match(fn, /headSha/, "each PR carries the head it was green on");
+  assert.match(fn, /isOwner\(\)/, "only the owner can ship");
+  assert.ok(!/fire\(/.test(html.slice(html.indexOf("function renderShip"), html.indexOf("function renderPatterns"))), "the table's button must not queue without the confirmation");
+});

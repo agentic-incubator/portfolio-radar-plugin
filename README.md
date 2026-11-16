@@ -26,7 +26,7 @@ The wizard takes about 20 minutes. It checks your machine and offers to install 
 | `/radar-report` | Today's top moves, in plain words |
 | `/radar-update` | Brings the newest engine into your copy as a pull request |
 | `/radar-dashboard` | Publishes or refreshes the dashboard: a private claude.ai artifact, or a single HTML file |
-| `/radar-actions` | Runs dashboard button requests: hand-offs, triage plans, approved steps, Ship it |
+| `/radar-actions` | Runs dashboard button requests: hand-offs, triage plans, approved steps, Ship it, Ship all |
 | `/radar-triage` | Pulls every open loop into one de-duplicated action list, checked against GitHub now: PRs the hand-offs opened, stopped requests, decisions waiting on you, and (in a Claude project) radar threads left waiting. Then closes the old threads and duplicate PRs if you say yes |
 
 Skills: `system-detect`, `github-app-manifest`, `radar-config`, `handoff-rules`, `branch-cleanup`, `dashboard`, `triage-plan`, `radar-triage`. Agents: `radar-installer`, `repo-handoff`, `portfolio-analyst`. A session-start hook says one line if your radar needs attention, and stays quiet otherwise.
@@ -43,7 +43,7 @@ Your copy is made from the template, not forked: a fork of a public repo has to 
 
 ## The dashboard
 
-A dark mission-control page: every repo as a dot on a radar scope (closer to the centre needs you sooner), vitals with 60-day sparklines and today's moves on its Overview, then a menu (grouped into Act now, Clean up in bulk and Keep an eye on) that shows one section at a time: what needs you, what's ready to ship, one fix across many repos, bots, goals, clients, noise, drift, what you've handed off (In flight, sortable and scrolling) and what couldn't be checked, plus a sortable Metrics table (stars, forks, issues, PRs closed, lines of code and downloads for each repo; radar engine 0.5.0 or later). The footer shows the plugin and engine versions. It comes in three forms, and `/radar-dashboard` picks the best one your account supports:
+A dark mission-control page: every repo as a dot on a radar scope (closer to the centre needs you sooner), vitals with 60-day sparklines and today's moves on its Overview, then a menu (grouped into Act now, Clean up in bulk and Keep an eye on) that shows one section at a time: what needs you, what's ready to ship (with a Ship all button for every green PR), one fix across many repos, bots, goals, clients, noise, drift, what you've handed off (In flight, scrolling) and what couldn't be checked, plus a Metrics table (stars, forks, issues, PRs closed, lines of code and downloads for each repo; radar engine 0.5.0 or later). Every table sorts when you click a column header. The footer shows the plugin and engine versions. It comes in three forms, and `/radar-dashboard` picks the best one your account supports:
 
 | Form | Buttons |
 |---|---|
@@ -57,7 +57,7 @@ Preview it with made-up data: `node plugins/portfolio-radar/scripts/build-dashbo
 
 - The radar's GitHub App is **read-only**. The plugin refuses to create it with any write permission.
 - Your app's private key goes from GitHub straight into your repo's Actions secrets. It's never shown, logged or saved.
-- Buttons that change things use Anthropic's Claude GitHub app, open a PR and stop. Only "Ship it", pressed by you, merges, and only if the PR is unchanged and green.
+- Buttons that change things use Anthropic's Claude GitHub app, open a PR and stop. Only "Ship it" and "Ship all", pressed by you, merge, and only PRs that are unchanged and green. Ship all lists every PR for you to confirm first, skips any that changed or aren't green when Claude gets to it, and reports each one.
 - Nothing is installed without your yes, and nothing is deleted unless you chose it.
 - To take a radar down (after a test run, or to demo setup again), follow [docs/teardown.md](docs/teardown.md). Deleting the repo doesn't delete the GitHub App.
 
