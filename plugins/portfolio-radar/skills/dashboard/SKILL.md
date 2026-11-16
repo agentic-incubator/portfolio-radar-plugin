@@ -31,7 +31,7 @@ The page shows one section at a time. It opens on **Overview** (the scope, vital
 | Keep an eye on | Goals, Clients, Metrics, Drift |
 | Today's read | Couldn't check |
 
-Each tab shows a count. `#<section>` at the end of the page's address opens that section (for example `#metrics`, `#flight`). In flight is a fixed-height table that shows about 10 rows and scrolls the rest; click a column (When, Action, Repo, Status) to sort, and the sort is remembered in the browser.
+Each tab shows a count. The owner filters and search apply everywhere, vitals included: with a filter on, each vital counts only the repos in view and says how many there are across all owners, and the sparklines and day-on-day changes are hidden because history is kept for all repos only. `#<section>` at the end of the page's address opens that section (for example `#metrics`, `#flight`). In flight is a fixed-height table that shows about 10 rows and scrolls the rest; click a column (When, Action, Repo, Status) to sort, and the sort is remembered in the browser.
 
 ## Metrics section
 

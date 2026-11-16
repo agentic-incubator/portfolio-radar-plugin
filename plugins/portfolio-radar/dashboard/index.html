@@ -221,7 +221,7 @@ code{font:12.5px var(--f-mono);background:var(--bg);border:1px solid var(--line)
       <div class="legend" id="legend"></div>
     </div>
     <div class="side">
-      <div><div class="eyebrow">Vitals · active repos only</div></div>
+      <div><div class="eyebrow" id="vitals-eyebrow">Vitals · active repos only</div></div>
       <div class="vitals" id="vitals"></div>
       <div><div class="eyebrow">Today's moves</div></div>
       <div class="moves" id="moves"></div>
@@ -424,8 +424,24 @@ function spark(values, color) {
   dot.setAttribute("cx", pts[n - 1][0]); dot.setAttribute("cy", pts[n - 1][1]); dot.setAttribute("r", "2.6"); dot.setAttribute("fill", color);
   svg.append(area, line, dot); return svg;
 }
+// With an owner filter or a search on, vitals count only the repos in view, the same way the engine
+// counts D.totals. History is kept for all repos only, so a filtered view shows no trend.
+const noiseInView = () => (D.noise || []).filter((n) => (!query || n.name.toLowerCase().includes(query)) && (filter === "all" || (filter === "clients" ? n.client : n.fullName.split("/")[0].toLowerCase() === filter.toLowerCase())));
+function viewTotals(rs) {
+  const sum = (f) => rs.reduce((n, r) => n + f(r), 0);
+  return {
+    repos: rs.length, private: rs.filter((r) => r.private).length,
+    critHigh: sum((r) => r.alerts.critHigh), alerts: sum((r) => r.alerts.total + r.alerts.secrets.length),
+    failing: rs.filter((r) => r.failing.length).length,
+    humanPrs: sum((r) => r.humanPrs.length), botPrs: sum((r) => r.botPrs.renovate + r.botPrs.dependabot + r.botPrs.other),
+    secrets: sum((r) => r.alerts.secrets.length), noise: noiseInView().length,
+  };
+}
 function renderVitals() {
-  const t = D.totals, hist = D.history || [], prev = hist.length > 1 ? hist[hist.length - 2] : null;
+  const filtered = filter !== "all" || !!query;
+  const all = D.totals, t = filtered ? viewTotals(visible()) : all;
+  const hist = filtered ? [] : D.history || [], prev = hist.length > 1 ? hist[hist.length - 2] : null;
+  $("vitals-eyebrow").textContent = filtered ? "Vitals · active repos in this view" : "Vitals · active repos only";
   const items = [
     ["repos", "Active repos", "var(--accent)", `${fmt(t.private)} private`],
     ["critHigh", "Critical / high alerts", "var(--critical)", `${fmt(t.alerts)} alerts in all`],
@@ -436,6 +452,7 @@ function renderVitals() {
   ];
   $("vitals").replaceChildren(...items.map(([k, label, c, sub]) => {
     const delta = prev && prev[k] != null ? t[k] - prev[k] : null;
+    if (filtered) sub = `of ${fmt(all[k])} across all owners`;
     return h("div", { class: "vital" }, h("div", { class: "v", style: `color:${t[k] ? c : "var(--fg)"}` }, fmt(t[k])), h("div", { class: "l" }, label),
       h("div", { class: "d" }, delta == null ? sub : `${delta > 0 ? "▲" : delta < 0 ? "▼" : "="} ${Math.abs(delta)} since yesterday`), spark(hist.map((x) => x[k] ?? 0), c));
   }));
@@ -658,7 +675,7 @@ function renderClients() {
 }
 
 function renderNoise() {
-  const ns = (D.noise || []).filter((n) => (!query || n.name.toLowerCase().includes(query)) && (filter === "all" || (filter === "clients" ? n.client : n.fullName.split("/")[0].toLowerCase() === filter.toLowerCase())));
+  const ns = noiseInView();
   if (!(D.noise || []).length && !("noise" in D.totals && D.history?.some((x) => "noise" in x && x.noise))) {
     return $("noise").replaceChildren(h("div", { class: "empty" }, D.totals.noise === 0 && D.noise ? "No archived or forked repo is raising alerts or bot PRs." : "Archived repos and forks are read from the next radar run on."));
   }
