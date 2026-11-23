@@ -176,6 +176,16 @@ test("Ship it repairs a conflict once and asks for a fresh ship it on the new he
   assert.ok(html.includes("headSha: headOf(r, p)"), "Ship it and Ship all must send the new head");
 });
 
+test("the Overview shows week-over-week flow and health cards between vitals and Today's moves", () => {
+  const html = readFileSync(`${P}/dashboard/index.html`, "utf8");
+  const v = html.indexOf('id="vitals"'), t = html.indexOf('id="trends"'), m = html.indexOf('id="moves"');
+  assert.ok(v > 0 && t > v && m > t, "trends sit between vitals and moves");
+  for (const f of ["prsMerged", "botPrsMerged", "issuesClosed", "issuesOpened"]) assert.ok(html.includes(`flow("${f}"`), `flow card for ${f}`);
+  for (const f of ["critHigh", "failingPct", "humanPrs", "stale", "renovatePct", "agentsPct"]) assert.ok(html.includes(`health("${f}"`), `health card for ${f}`);
+  assert.match(html, /now == null \? "\?"/, "an unknown value shows ? and never 0");
+  assert.match(html, /engine 0\.6\.0/, "says what to do when the engine has no weekly series yet");
+});
+
 test("Ship all asks first and lists each PR it will merge", () => {
   const html = readFileSync(`${P}/dashboard/index.html`, "utf8");
   const fn = html.slice(html.indexOf("function confirmShipAll"), html.indexOf("async function fire"));

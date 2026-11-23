@@ -63,6 +63,14 @@ button{font:inherit;color:inherit}
 .vital .l{font-size:12px;color:var(--muted)}
 .vital .d{font:11px var(--f-mono);color:var(--dim)}
 .vital svg{display:block;width:100%;height:26px;margin-top:4px}
+.trends{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.trend{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;min-width:0}
+.trend .v{font:700 22px/1.1 var(--f-display);letter-spacing:.02em;font-variant-numeric:tabular-nums}
+.trend .l{font-size:12px;color:var(--muted)}
+.trend .d{font:11px var(--f-mono);color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trend .d.good{color:var(--good)}.trend .d.bad{color:var(--bad)}
+.trend svg{display:block;width:100%;height:22px;margin-top:3px}
+.trends-note{grid-column:1/-1;margin:0}
 
 .moves{display:flex;flex-direction:column;gap:8px}
 .move{display:grid;grid-template-columns:4px 1fr auto;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px 10px 0;min-width:0}
@@ -232,6 +240,8 @@ code{font:12.5px var(--f-mono);background:var(--bg);border:1px solid var(--line)
     <div class="side">
       <div><div class="eyebrow" id="vitals-eyebrow">Vitals · active repos only</div></div>
       <div class="vitals" id="vitals"></div>
+      <div><div class="eyebrow" id="trends-eyebrow">Week over week · all owners</div></div>
+      <div class="trends" id="trends"></div>
       <div><div class="eyebrow">Today's moves</div></div>
       <div class="moves" id="moves"></div>
     </div>
@@ -260,7 +270,7 @@ code{font:12.5px var(--f-mono);background:var(--bg);border:1px solid var(--line)
 "use strict";
 document.getElementById("js-note")?.remove();
 // Bumped with the plugin manifests; a test keeps them in step.
-const PLUGIN_VERSION = "0.11.0";
+const PLUGIN_VERSION = "0.12.0";
 // Per-person settings come from config.json next to data.json, written by /radar-dashboard. Nothing personal is in this file.
 const DEFAULTS = { ownerName: "you", triggerId: null, steward: false, stewardRepos: [], preferRenovate: false, radarRepo: "", runsWhere: "a new Claude Code task" };
 let CFG = { ...DEFAULTS };
@@ -427,7 +437,7 @@ function render() {
   refreshShipKeys();
   // An older engine doesn't write its version: say so rather than guess.
   $("versions").textContent = `plugin v${PLUGIN_VERSION} · engine ${D.engine ? `v${D.engine}` : "version not reported (update with /radar-update)"}`;
-  renderFilters(); renderLegend(); renderVitals(); renderMoves(); drawRadar();
+  renderFilters(); renderLegend(); renderVitals(); renderTrends(); renderMoves(); drawRadar();
   renderNeeds(); renderShip(); renderPatterns(); renderBots(); renderGoals(); renderClients(); renderNoise(); renderDrift(); renderMetrics(); renderFlight(); renderGaps(); renderNav();
 }
 
@@ -489,6 +499,54 @@ function renderVitals() {
     return h("div", { class: "vital" }, h("div", { class: "v", style: `color:${t[k] ? c : "var(--fg)"}` }, fmt(t[k])), h("div", { class: "l" }, label),
       h("div", { class: "d" }, delta == null ? sub : `${delta > 0 ? "▲" : delta < 0 ? "▼" : "="} ${Math.abs(delta)} since yesterday`), spark(hist.map((x) => x[k] ?? 0), c));
   }));
+}
+
+// ---------- week over week ----------
+// Flow cards come from D.weekly (engine 0.6.0+): the number is the last full week, the change is against the week
+// before, and "so far" is the week in progress. Health cards sample the daily history once a week (the last row of
+// each Monday-to-Sunday week); the change is against the previous week's sample. An unknown value shows "?" and
+// never counts as 0. These are estate-wide, so the owner filter and search don't change them.
+const isoMonday = (d) => { const t = new Date(`${d}T00:00:00Z`); return new Date(t - ((t.getUTCDay() + 6) % 7) * 864e5).toISOString().slice(0, 10); };
+function weeklySamples(hist, f) {
+  const by = new Map();
+  for (const x of hist) { if (x?.date && x[f] != null) by.set(isoMonday(x.date), x[f]); }
+  return [...by.entries()].sort((a, b) => a[0].localeCompare(b[0])).map((e) => e[1]);
+}
+function trendCard({ label, now, fmtV = (n) => fmt(n), vals, prevV, up, sub, color }) {
+  const delta = now != null && prevV != null ? now - prevV : null;
+  const good = delta == null || delta === 0 || up == null ? "" : (delta > 0) === up ? "good" : "bad";
+  const dText = delta == null ? (sub || "no earlier week yet") : `${delta > 0 ? "▲" : delta < 0 ? "▼" : "="} ${fmtV(Math.abs(delta))} vs last week`;
+  return h("div", { class: "trend", title: sub || null }, h("div", { class: "v", style: now ? `color:${color}` : null }, now == null ? "?" : fmtV(now)), h("div", { class: "l" }, label), h("div", { class: `d ${good}` }, dText), spark(vals.filter((v) => v != null), color));
+}
+function renderTrends() {
+  const root = $("trends"), cards = [];
+  const weekly = Array.isArray(D.weekly) ? D.weekly : null;
+  if (weekly) {
+    const full = weekly.filter((w) => !w.partial), cur = weekly.find((w) => w.partial);
+    const flow = (f, label, up, color) => {
+      const last = full.at(-1), before = full.at(-2);
+      cards.push(trendCard({ label, now: last?.[f] ?? null, vals: full.map((w) => w[f]), prevV: before?.[f] ?? null, up, color, sub: cur && cur[f] != null ? `${fmt(cur[f])} so far this week` : "this week so far: ?" }));
+    };
+    flow("prsMerged", "PRs merged", true, "var(--ok)");
+    flow("botPrsMerged", "Bot PRs merged", true, "var(--drift)");
+    flow("issuesClosed", "Issues closed", true, "var(--ok)");
+    flow("issuesOpened", "Issues opened", null, "var(--prs)");
+  } else cards.push(h("p", { class: "note trends-note" }, "Weekly flow (PRs merged, issues closed and opened) appears after the first radar run on engine 0.6.0 or later."));
+  const hist = D.history || [], T = D.totals || {}, n = T.repos || 0;
+  const pct = (v) => (n ? Math.round((v / n) * 100) : null);
+  const health = (f, label, up, color, opts = {}) => {
+    const conv = opts.conv || ((x) => x);
+    const rows = hist.map((x) => ({ date: x.date, [f]: x[opts.of || f] == null ? null : conv(x[opts.of || f], x) }));
+    const vals = weeklySamples(rows, f), now = T[opts.of || f] == null ? null : conv(T[opts.of || f], T);
+    cards.push(trendCard({ label, now, vals: [...vals.slice(0, -1), ...(now != null ? [now] : [])], prevV: vals.length > 1 ? vals.at(-2) : null, up, color, fmtV: opts.fmtV, sub: opts.sub }));
+  };
+  health("critHigh", "Critical / high alerts", false, "var(--critical)");
+  health("failingPct", "Repos with red CI", false, "var(--ci)", { of: "failing", conv: (v, t) => (t.repos ? Math.round((v / t.repos) * 100) : null), fmtV: (v) => `${v}%`, sub: "share of active repos" });
+  health("humanPrs", "People's PRs waiting", false, "var(--prs)", { sub: T.prAgeMedian != null ? `median age ${T.prAgeMedian} days` : "none open" });
+  health("stale", "Repos quiet 90+ days", false, "var(--stale)");
+  health("renovatePct", "On Renovate only", true, "var(--ok)", { of: "renovateOnly", conv: (v, t) => (t.repos ? Math.round((v / t.repos) * 100) : null), fmtV: (v) => `${v}%`, sub: "no Dependabot update PRs" });
+  health("agentsPct", "Have AGENTS.md", true, "var(--ok)", { of: "noAgents", conv: (v, t) => (t.repos ? Math.round(((t.repos - v) / t.repos) * 100) : null), fmtV: (v) => `${v}%`, sub: "share of active repos" });
+  root.replaceChildren(...cards);
 }
 
 function renderMoves() {
