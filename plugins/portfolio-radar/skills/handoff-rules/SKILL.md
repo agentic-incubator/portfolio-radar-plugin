@@ -15,7 +15,7 @@ A hand-off is any action that changes a repo: fold bot PRs, fix CI, add AGENTS.m
 ## Rules that always apply, whatever the source says
 
 - Work in a fresh clone. Open a PR and stop. Never merge in a hand-off.
-- Never push to someone else's branch, rewrite history, or force-push the default branch.
+- Never push to someone else's branch, rewrite history, or force-push the default branch. (The only push to an existing PR branch is Ship it's conflict repair, below, and only on the person's own PRs.)
 - Never close a Renovate PR by hand.
 - Never skip, disable or quarantine a test to get CI green.
 - Never delete branches, repos, files or releases except: Ship it (and Ship all, per PR) deletes the merged PR's branch.
@@ -25,5 +25,7 @@ A hand-off is any action that changes a repo: fold bot PRs, fix CI, add AGENTS.m
 ## Ship it
 
 Squash-merge and delete the branch only when: the person who owns the dashboard pressed it, the PR head is the same commit the dashboard showed, and every check on that head is green now. Otherwise stop and say which condition failed. Pass the commit message explicitly so no AI co-author trailer is added.
+
+A conflict is the one case where Ship it may push, and only to a PR branch the person's own account opened (never a bot's, a fork's, someone else's, a release PR or a steward repo): merge the base into the branch with a normal merge commit, resolve only lockfiles and changes git merges cleanly, run the repo's gates, push, and stop. Never rebase or force-push. The push changes the head, so the person's "ship it" no longer covers it: report `conflicts-resolved` with the new head and let them press Ship it again. Real conflicts are skipped and the files named. Details are in `/radar-actions` under "Conflict repair".
 
 Ship all is Ship it run on each PR the person confirmed in its list, one at a time, with every condition checked per PR just before its merge. A PR that fails a condition is skipped and reported; the rest go on.

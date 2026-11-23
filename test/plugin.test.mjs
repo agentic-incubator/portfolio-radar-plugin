@@ -153,6 +153,39 @@ test("every action the dashboard queues is handled by /radar-actions", () => {
   for (const a of actions) assert.ok(doc.includes(`\`${a}\``), `/radar-actions doesn't handle ${a}`);
 });
 
+test("a PR handed to Ship it or Ship all leaves Ready to ship until its request stops or fails", () => {
+  const html = readFileSync(`${P}/dashboard/index.html`, "utf8");
+  assert.match(html, /function refreshShipKeys/, "dashboard should track PRs already shipping");
+  const fn = html.slice(html.indexOf("function refreshShipKeys"), html.indexOf("const isShipping"));
+  for (const k of ['"stopped"', '"ship-it"', '"ship-all"', '"skipped"', '"failed"']) assert.ok(fn.includes(k), `refreshShipKeys should consider ${k}`);
+  const ship = html.slice(html.indexOf("function renderShip"), html.indexOf("function renderPatterns"));
+  assert.match(ship, /isShipping\(r, p\)/, "renderShip should skip PRs already shipping");
+  assert.match(html, /case "ship": return rs\.reduce\(\(n, r\) => n \+ r\.humanPrs\.filter\(\(p\) => !isShipping/, "the tab count should skip them too");
+});
+
+test("Ship it repairs a conflict once and asks for a fresh ship it on the new head", () => {
+  const html = readFileSync(`${P}/dashboard/index.html`, "utf8");
+  const doc = readFileSync(`${P}/commands/radar-actions.md`, "utf8");
+  const rules = readFileSync(`${P}/skills/handoff-rules/SKILL.md`, "utf8");
+  assert.match(doc, /## Conflict repair/, "radar-actions should describe the repair");
+  assert.match(doc, /Never rebase, amend or force-push/);
+  assert.match(doc, /`conflicts-resolved`/);
+  assert.match(rules, /conflicts-resolved/, "handoff-rules should allow the one push");
+  assert.match(html, /"conflicts-resolved"/, "the dashboard should show the outcome");
+  assert.match(html, /const headOf = /, "the next Ship it should use the new head");
+  assert.ok(html.includes("headSha: headOf(r, p)"), "Ship it and Ship all must send the new head");
+});
+
+test("the Overview shows week-over-week flow and health cards between vitals and Today's moves", () => {
+  const html = readFileSync(`${P}/dashboard/index.html`, "utf8");
+  const v = html.indexOf('id="vitals"'), t = html.indexOf('id="trends"'), m = html.indexOf('id="moves"');
+  assert.ok(v > 0 && t > v && m > t, "trends sit between vitals and moves");
+  for (const f of ["prsMerged", "botPrsMerged", "issuesClosed", "issuesOpened"]) assert.ok(html.includes(`flow("${f}"`), `flow card for ${f}`);
+  for (const f of ["critHigh", "failingPct", "humanPrs", "stale", "renovatePct", "agentsPct"]) assert.ok(html.includes(`health("${f}"`), `health card for ${f}`);
+  assert.match(html, /now == null \? "\?"/, "an unknown value shows ? and never 0");
+  assert.match(html, /engine 0\.6\.0/, "says what to do when the engine has no weekly series yet");
+});
+
 test("Ship all asks first and lists each PR it will merge", () => {
   const html = readFileSync(`${P}/dashboard/index.html`, "utf8");
   const fn = html.slice(html.indexOf("function confirmShipAll"), html.indexOf("async function fire"));
