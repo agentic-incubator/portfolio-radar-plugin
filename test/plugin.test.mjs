@@ -208,4 +208,7 @@ test("Sweep all asks first, lists each repo, and never merges", () => {
   const sweep = doc.slice(doc.indexOf("## Sweep all"), doc.indexOf("## After"));
   assert.match(sweep, /never merges/);
   assert.match(sweep, /repo by repo/);
+  assert.match(sweep, /conflicts-resolved/, "Sweep all repairs a conflicting PR that already covers a repo");
+  assert.match(doc.slice(doc.indexOf("## Each request"), doc.indexOf("## Conflict repair")), /sweep-package[\s\S]{0,400}Conflict repair/, "one-package Sweep repairs too");
+  assert.match(html, /"conflicts-resolved": "conflicts resolved"/, "the dashboard labels the sweep outcome");
 });

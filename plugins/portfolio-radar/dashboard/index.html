@@ -270,7 +270,7 @@ code{font:12.5px var(--f-mono);background:var(--bg);border:1px solid var(--line)
 "use strict";
 document.getElementById("js-note")?.remove();
 // Bumped with the plugin manifests; a test keeps them in step.
-const PLUGIN_VERSION = "0.12.0";
+const PLUGIN_VERSION = "0.13.0";
 // Per-person settings come from config.json next to data.json, written by /radar-dashboard. Nothing personal is in this file.
 const DEFAULTS = { ownerName: "you", triggerId: null, steward: false, stewardRepos: [], preferRenovate: false, radarRepo: "", runsWhere: "a new Claude Code task" };
 let CFG = { ...DEFAULTS };
@@ -973,8 +973,8 @@ function shipAllBlock(a) {
   }));
 }
 // Each repo in a Sweep all request, with the packages it was asked to clear and what happened there.
-const SWEEP_C = { "pr-opened": "var(--good)", "already-open": "var(--accent)", "already-fixed": "var(--muted)", skipped: "var(--warn)", failed: "var(--bad)" };
-const SWEEP_L = { "pr-opened": "PR opened", "already-open": "PR already open", "already-fixed": "already fixed", skipped: "skipped", failed: "failed" };
+const SWEEP_C = { "pr-opened": "var(--good)", "already-open": "var(--accent)", "conflicts-resolved": "var(--accent)", "already-fixed": "var(--muted)", skipped: "var(--warn)", failed: "var(--bad)" };
+const SWEEP_L = { "pr-opened": "PR opened", "already-open": "PR already open", "conflicts-resolved": "conflicts resolved", "already-fixed": "already fixed", skipped: "skipped", failed: "failed" };
 const shortRepo = (full) => (D?.owner && full.startsWith(`${D.owner}/`) ? full.slice(D.owner.length + 1) : full);
 function sweepTargets(sweeps) {
   const by = new Map();
