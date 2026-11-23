@@ -16,7 +16,7 @@ Fields: `action`, `repo`, `label`, and for some actions `workflow`, `pkg`, `repo
 
 1. Load the rules with the `handoff-rules` skill.
 2. By action:
-   - `fix-ci`, `fold-bot-prs`, `add-agents-md`, `move-to-renovate`, `sweep-package`, `promote-fork`: hand to the `repo-handoff` agent with the request. `move-to-renovate` only when the rules say `prefer-renovate: true`; otherwise stop with "Renovate moves are off in your hand-off rules". `promote-fork` opens its PR in the person's radar repo (adds the repo to `activeForks`).
+   - `fix-ci`, `fold-bot-prs`, `add-agents-md`, `move-to-renovate`, `sweep-package`, `promote-fork`: hand to the `repo-handoff` agent with the request. For `sweep-package`, if the open PR that already clears the package conflicts with its base, run "Conflict repair" on it (once per PR) instead of opening a second PR, and say so in the `result`. `move-to-renovate` only when the rules say `prefer-renovate: true`; otherwise stop with "Renovate moves are off in your hand-off rules". `promote-fork` opens its PR in the person's radar repo (adds the repo to `activeForks`).
    - `triage`: follow the `triage-plan` skill. It changes nothing; write the plan back on the request as `steps`.
    - `ship-it`: see below.
    - `ship-all`: see "Ship all" below. It counts as one request.
@@ -49,7 +49,7 @@ Each PR ends as one of:
 Write them back on the request as `results: [{ repo, pr, outcome, why, headSha, cleanup }]` (`headSha` only for `conflicts-resolved`, `cleanup` only when the branch delete was refused) as you go, so the dashboard shows progress, and finish with a `result` like "5 merged, 2 skipped, 0 failed". Mark the request `done` when every entry has a result, even if some were skipped.
 
 ## Conflict repair
-Used by Ship it and Ship all when a PR is otherwise ready but conflicts with its base. It never merges. Attempt it once per PR per request, and only when all hold:
+Used by Ship it and Ship all when a PR is otherwise ready but conflicts with its base, and by Sweep all and Sweep (one package) when the open PR that already clears a package conflicts with its base (see those sections). It never merges. Attempt it once per PR per request, and only when all hold:
 - the PR was opened by the dashboard owner (or by the Claude app on their behalf), from a branch in the same repo, not a fork;
 - it is not a Renovate or Dependabot PR (leave those: ask Renovate to rebase itself from its dashboard, and say so), not a release PR into main, and not in a steward-managed repo.
 
@@ -64,17 +64,18 @@ The person pressed Sweep all on "One fix, many repos" and confirmed the list. `s
 
 Work repo by repo, not package by package, so two PRs never rewrite the same lockfile. For each repo that appears in any entry, in the order it first appears:
 1. Check its open alerts now. Keep only the listed packages that still have an open alert there.
-2. Look for an open PR (the person's, a hand-off's or a bot's) that already clears those packages.
+2. Look for an open PR (the person's, a hand-off's or a bot's) that already clears those packages. If it conflicts with its base (mergeable false, state dirty), follow "Conflict repair" on it once: when it qualifies and the repair works, the repo ends as `conflicts-resolved`; otherwise it is `already-open` and `why` says it conflicts and what held the repair back (a bot's PR, a fork, real conflicts with the files named, or a failing gate).
 3. Otherwise hand the `repo-handoff` agent one `sweep-package` job for that repo covering all the packages left, under the same rules as a single sweep (release-age gate, majors and 0.x minors deferred and listed unless `okBumps` names them).
 
 Each repo ends as one of:
 - `pr-opened`: `url` is the new PR; `why` lists anything deferred.
 - `already-open`: `url` is the PR that already covers it.
+- `conflicts-resolved`: the PR that already covers it conflicted, Claude merged the base into it and pushed; `url` is that PR, `headSha` the new 40-character head, `why` what was resolved. Nothing is merged.
 - `already-fixed`: none of its listed packages has an open alert any more.
 - `skipped`: the hand-off rules hold it back (a steward-managed repo, the Claude app not installed, a protected repo); `why` says which.
 - `failed`: `why` says what went wrong. One repo failing doesn't stop the rest.
 
-Write `results: [{ repo, outcome, why, url }]` back on the request after each repo so the dashboard shows progress, and finish with a `result` like "6 PRs opened, 2 already open, 1 already fixed, 0 failed". Mark it `done` when every repo has a result.
+Write `results: [{ repo, outcome, why, url, headSha }]` (`headSha` only for `conflicts-resolved`) back on the request after each repo so the dashboard shows progress, and finish with a `result` like "6 PRs opened, 2 already open, 1 conflicts resolved, 1 already fixed, 0 failed". Mark it `done` when every repo has a result.
 
 ## After
 Reply with one line per request: what happened and the PR link. For Ship all, one line per PR. If a request stopped, say why and what the person can do.
