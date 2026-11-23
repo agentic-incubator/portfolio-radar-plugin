@@ -260,7 +260,7 @@ code{font:12.5px var(--f-mono);background:var(--bg);border:1px solid var(--line)
 "use strict";
 document.getElementById("js-note")?.remove();
 // Bumped with the plugin manifests; a test keeps them in step.
-const PLUGIN_VERSION = "0.10.0";
+const PLUGIN_VERSION = "0.11.0";
 // Per-person settings come from config.json next to data.json, written by /radar-dashboard. Nothing personal is in this file.
 const DEFAULTS = { ownerName: "you", triggerId: null, steward: false, stewardRepos: [], preferRenovate: false, radarRepo: "", runsWhere: "a new Claude Code task" };
 let CFG = { ...DEFAULTS };
@@ -316,23 +316,24 @@ const isOwner = () => (caps.user ? (caps.user.isOwner?.() ?? false) : !window.cl
 // request, or a Ship all result of skipped/failed, brings its PR back. Requests older than today's data are
 // ignored, because the morning read already reflects what merged.
 let shipKeys = new Set();
+let fixedHeads = new Map(); // "owner/name#pr" -> new head SHA after Claude resolved a merge conflict
 function refreshShipKeys() {
-  const s = new Set(), gen = D?.generated ? new Date(D.generated) : null;
+  const s = new Set(), fixed = new Map(), gen = D?.generated ? new Date(D.generated) : null;
   for (const a of flight.values()) {
     if (a.status === "stopped") continue;
     if (gen && a.requestedAt && new Date(a.requestedAt) <= gen) continue;
-    if (a.action === "ship-it" && a.repo && a.pr != null) s.add(`${a.repo}#${a.pr}`);
-    if (a.action === "ship-all" && Array.isArray(a.prs)) {
-      const res = Array.isArray(a.results) ? a.results : [];
-      for (const p of a.prs) {
-        const r = res.find((x) => x && x.repo === p.repo && Number(x.pr) === Number(p.pr));
-        if (r && (r.outcome === "skipped" || r.outcome === "failed")) continue;
-        s.add(`${p.repo}#${p.pr}`);
-      }
+    const entries = a.action === "ship-it" && a.repo && a.pr != null ? [{ repo: a.repo, pr: a.pr }] : a.action === "ship-all" && Array.isArray(a.prs) ? a.prs : [];
+    const res = Array.isArray(a.results) ? a.results : [];
+    for (const p of entries) {
+      const key = `${p.repo}#${p.pr}`, r = res.find((x) => x && x.repo === p.repo && Number(x.pr) === Number(p.pr));
+      if (r?.outcome === "conflicts-resolved") { if (/^[0-9a-f]{40}$/.test(r.headSha || "")) fixed.set(key, r.headSha); continue; }
+      if (r && (r.outcome === "skipped" || r.outcome === "failed")) continue;
+      s.add(key);
     }
   }
-  shipKeys = s;
+  shipKeys = s; fixedHeads = fixed;
 }
+const headOf = (r, p) => fixedHeads.get(`${r.fullName}#${p.number}`) || p.headSha;
 const isShipping = (r, p) => shipKeys.has(`${r.fullName}#${p.number}`);
 
 // ---------- capabilities (light up when present) ----------
@@ -688,7 +689,7 @@ function renderShip() {
   const ready = rows.filter(({ p }) => isReady(p));
   const tb = h("tbody", {}, rows.map(({ r, p }) => h("tr", {},
     h("td", {}, h("button", { class: "repo-link", onclick: () => openRepo(r) }, r.name)),
-    h("td", {}, h("a", { href: p.url, target: "_blank", rel: "noopener" }, `#${p.number} `), p.title, h("div", { class: "sub" }, `${p.author}${p.draft ? " · draft" : ""}`)),
+    h("td", {}, h("a", { href: p.url, target: "_blank", rel: "noopener" }, `#${p.number} `), p.title, h("div", { class: "sub" }, `${p.author}${p.draft ? " · draft" : ""}`, fixedHeads.has(`${r.fullName}#${p.number}`) ? [" · ", pill(`conflicts resolved · new head ${headOf(r, p).slice(0, 7)}`, "var(--accent)"), " check CI, then Ship it again"] : "")),
     h("td", { class: "mono nowrap" }, ago(p.created)),
     h("td", {}, p.draft ? pill("draft", "var(--muted)") : checksPill(p.checks)),
     h("td", {}, isReady(p) ? shipBtn(r, p) : link(p.url, "Review ↗")))));
@@ -896,20 +897,21 @@ function renderFlight(err) {
     h("tbody", {}, items.map(([id, a]) => h("tr", {}, h("td", { class: "mono nowrap" }, a.requestedAt ? new Date(a.requestedAt).toLocaleString([], { dateStyle: "short", timeStyle: "short" }) : "–"),
       h("td", { class: "nowrap" }, a.label || a.action), h("td", {}, a.repo ? h("span", { class: "repo-cell", title: a.repo }, a.repo) : "–"),
       h("td", {}, h("div", { class: "fstat" }, h("div", { class: "fline" }, pill(a.status || "sent", stC[a.status] || "var(--warn)"), a.fromPlan ? h("span", { class: "sub" }, "From an approved plan") : "", a.resultUrl ? h("a", { href: a.resultUrl, target: "_blank", rel: "noopener" }, "Result ↗") : ""),
-        a.resultNote ? noteBlock(a.resultNote) : "", a.action === "ship-all" && Array.isArray(a.prs) ? shipAllBlock(a) : "", a.action === "sweep-all" && Array.isArray(a.sweeps) ? sweepAllBlock(a) : "", a.action === "triage" && Array.isArray(a.steps) && a.steps.length ? planBlock(id, a) : ""))))))),
+        a.resultNote ? noteBlock(a.resultNote) : "", a.action === "ship-all" && Array.isArray(a.prs) ? shipAllBlock(a) : "", a.action === "ship-it" && Array.isArray(a.results) && a.results.length ? shipAllBlock({ ...a, prs: [{ repo: a.repo, pr: a.pr }] }) : "", a.action === "sweep-all" && Array.isArray(a.sweeps) ? sweepAllBlock(a) : "", a.action === "triage" && Array.isArray(a.steps) && a.steps.length ? planBlock(id, a) : ""))))))),
     items.length > 10 ? h("div", { class: "note", style: "margin-top:6px" }, items.length >= 40 ? "The latest 40 actions. Scroll the table for more." : `${items.length} actions. Scroll the table for more.`) : "");
 }
 // Each PR in a Ship all request, with what happened to it once Claude reports back.
-const OUTCOME_C = { merged: "var(--good)", skipped: "var(--warn)", failed: "var(--bad)" };
+const OUTCOME_C = { merged: "var(--good)", "conflicts-resolved": "var(--accent)", skipped: "var(--warn)", failed: "var(--bad)" };
+const OUTCOME_L = { "conflicts-resolved": "conflicts resolved, ship again" };
 function shipAllBlock(a) {
   const res = Array.isArray(a.results) ? a.results : [];
   const waiting = a.status === "done" || a.status === "stopped" ? "not reported" : a.status === "running" ? "in progress" : "waiting";
   return h("ul", { class: "shipres" }, a.prs.map((p) => {
     const r = res.find((x) => x && x.repo === p.repo && Number(x.pr) === Number(p.pr));
     const out = r?.outcome && OUTCOME_C[r.outcome] ? r.outcome : null;
-    return h("li", {}, pill(out || waiting, out ? OUTCOME_C[out] : "var(--muted)"),
+    return h("li", {}, pill(out ? OUTCOME_L[out] || out : waiting, out ? OUTCOME_C[out] : "var(--muted)"),
       /^https:\/\//.test(p.url || "") ? h("a", { href: p.url, target: "_blank", rel: "noopener" }, `${p.repo.split("/").pop()}#${p.pr}`) : `${p.repo}#${p.pr}`,
-      r?.why ? h("span", { class: "sub" }, r.why) : "");
+      r?.why ? h("span", { class: "sub" }, r.why) : "", r?.cleanup ? [h("span", { class: "sub" }, "delete the branch yourself:"), h("code", {}, String(r.cleanup).slice(0, 200))] : "");
   }));
 }
 // Each repo in a Sweep all request, with the packages it was asked to clear and what happened there.
@@ -1042,9 +1044,9 @@ function confirmShip(r, p) {
   const status = h("div", { class: "status" });
   const owner = isOwner();
   const go = h("button", { class: "btn ship", disabled: !owner }, "Ship it");
-  go.addEventListener("click", () => fire({ action: "ship-it", repo: r.fullName, pr: p.number, headSha: p.headSha, title: p.title, label: `Ship it #${p.number}` }, go, status));
+  go.addEventListener("click", () => fire({ action: "ship-it", repo: r.fullName, pr: p.number, headSha: headOf(r, p), title: p.title, label: `Ship it #${p.number}` }, go, status));
   drawer(h("div", { class: "confirm shipit" }, h("div", { class: "eyebrow" }, "Ship it"), h("h3", {}, `${r.name} #${p.number}`), h("div", {}, p.title),
-    h("ul", {}, h("li", {}, "Counts as your \"ship it\" for this PR only"), h("li", {}, h("span", {}, "Merges only if the head is still "), h("code", {}, (p.headSha || "").slice(0, 7)), h("span", {}, " and every check is green")), h("li", {}, "Squash-merges and deletes the branch"), CFG.steward ? h("li", {}, "Your local clone syncs later with steward fleet sync") : h("li", {}, "Pull your local clone afterwards")),
+    h("ul", {}, h("li", {}, "Counts as your \"ship it\" for this PR only"), h("li", {}, h("span", {}, "Merges only if the head is still "), h("code", {}, (headOf(r, p) || "").slice(0, 7)), h("span", {}, " and every check is green")), h("li", {}, "Squash-merges and deletes the branch"), CFG.steward ? h("li", {}, "Your local clone syncs later with steward fleet sync") : h("li", {}, "Pull your local clone afterwards")),
     h("div", { class: "note" }, `CI from this morning's read: ${p.checks}. Claude checks it again before merging.`),
     owner ? "" : h("div", { class: "status err" }, "Only the dashboard's owner can ship."),
     h("div", { class: "acts" }, go, link(p.url, "Review PR ↗"), h("button", { class: "btn ghost", onclick: closeDrawer }, "Cancel")), status));
@@ -1057,11 +1059,11 @@ function confirmShipAll(ready, notReady) {
   const owner = isOwner();
   const n = ready.length, many = n === 1 ? "PR" : "PRs";
   const go = h("button", { class: "btn ship", disabled: !owner }, `Ship ${n} ${many}`);
-  const prs = ready.map(({ r, p }) => ({ repo: r.fullName, pr: p.number, headSha: p.headSha, title: p.title, url: p.url }));
+  const prs = ready.map(({ r, p }) => ({ repo: r.fullName, pr: p.number, headSha: headOf(r, p), title: p.title, url: p.url }));
   go.addEventListener("click", () => fire({ action: "ship-all", repo: null, prs, label: `Ship all (${n} ${many})` }, go, status));
   const sameRepo = Object.values(prs.reduce((m, x) => ((m[x.repo] = (m[x.repo] || 0) + 1), m), {})).some((c) => c > 1);
   drawer(h("div", { class: "confirm shipit" }, h("div", { class: "eyebrow" }, "Ship all"), h("h3", {}, `Ship ${n} green ${many}?`),
-    h("ol", { class: "shiplist", "aria-label": "PRs to ship" }, ready.map(({ r, p }) => h("li", {}, h("b", { class: "nowrap" }, r.name), h("a", { href: p.url, target: "_blank", rel: "noopener" }, `#${p.number}`), h("span", { class: "tt" }, p.title), h("code", {}, (p.headSha || "").slice(0, 7))))),
+    h("ol", { class: "shiplist", "aria-label": "PRs to ship" }, ready.map(({ r, p }) => h("li", {}, h("b", { class: "nowrap" }, r.name), h("a", { href: p.url, target: "_blank", rel: "noopener" }, `#${p.number}`), h("span", { class: "tt" }, p.title), h("code", {}, (headOf(r, p) || "").slice(0, 7))))),
     h("ul", {},
       h("li", {}, `Counts as your "ship it" for these ${n} ${many} only, in the order shown`),
       h("li", {}, "Each merges only if its head is still the commit shown and every check is green now. Any that isn't is skipped, and Claude says why"),
