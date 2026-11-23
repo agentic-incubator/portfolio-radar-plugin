@@ -153,6 +153,16 @@ test("every action the dashboard queues is handled by /radar-actions", () => {
   for (const a of actions) assert.ok(doc.includes(`\`${a}\``), `/radar-actions doesn't handle ${a}`);
 });
 
+test("a PR handed to Ship it or Ship all leaves Ready to ship until its request stops or fails", () => {
+  const html = readFileSync(`${P}/dashboard/index.html`, "utf8");
+  assert.match(html, /function refreshShipKeys/, "dashboard should track PRs already shipping");
+  const fn = html.slice(html.indexOf("function refreshShipKeys"), html.indexOf("const isShipping"));
+  for (const k of ['"stopped"', '"ship-it"', '"ship-all"', '"skipped"', '"failed"']) assert.ok(fn.includes(k), `refreshShipKeys should consider ${k}`);
+  const ship = html.slice(html.indexOf("function renderShip"), html.indexOf("function renderPatterns"));
+  assert.match(ship, /isShipping\(r, p\)/, "renderShip should skip PRs already shipping");
+  assert.match(html, /case "ship": return rs\.reduce\(\(n, r\) => n \+ r\.humanPrs\.filter\(\(p\) => !isShipping/, "the tab count should skip them too");
+});
+
 test("Ship all asks first and lists each PR it will merge", () => {
   const html = readFileSync(`${P}/dashboard/index.html`, "utf8");
   const fn = html.slice(html.indexOf("function confirmShipAll"), html.indexOf("async function fire"));

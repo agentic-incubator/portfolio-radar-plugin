@@ -238,7 +238,7 @@ code{font:12.5px var(--f-mono);background:var(--bg);border:1px solid var(--line)
   </div>
 
   <section id="s-needs"><div class="sh"><h2>Needs you</h2><p>Ranked: exposed secrets, critical and high alerts, red CI, then people's PRs.</p></div><div class="grid" id="needs"></div><div class="more" id="needs-more"></div></section>
-  <section id="s-ship"><div class="sh"><h2>Ready to ship</h2><p>People's PRs and their CI. Ship it squash-merges a green PR and deletes its branch.</p></div><div id="ship"></div></section>
+  <section id="s-ship"><div class="sh"><h2>Ready to ship</h2><p>People's PRs and their CI. Ship it squash-merges a green PR and deletes its branch. Once handed off, a PR leaves this list and shows under In flight.</p></div><div id="ship"></div></section>
   <section id="s-patterns"><div class="sh"><h2>One fix, many repos</h2><p>The same vulnerable package in several repos. One sweep clears them all.</p></div><div id="patterns"></div></section>
   <section id="s-bots"><div class="sh"><h2>Dependency bots</h2><p id="bots-sub">Which repos get dependency updates from Renovate, Dependabot, both or neither.</p></div><div id="bots"></div></section>
   <section id="s-goals"><div class="sh"><h2>Goals</h2><p>Repos tied to what you're working toward.</p></div><div class="grid" id="goals"></div></section>
@@ -260,7 +260,7 @@ code{font:12.5px var(--f-mono);background:var(--bg);border:1px solid var(--line)
 "use strict";
 document.getElementById("js-note")?.remove();
 // Bumped with the plugin manifests; a test keeps them in step.
-const PLUGIN_VERSION = "0.9.0";
+const PLUGIN_VERSION = "0.10.0";
 // Per-person settings come from config.json next to data.json, written by /radar-dashboard. Nothing personal is in this file.
 const DEFAULTS = { ownerName: "you", triggerId: null, steward: false, stewardRepos: [], preferRenovate: false, radarRepo: "", runsWhere: "a new Claude Code task" };
 let CFG = { ...DEFAULTS };
@@ -312,6 +312,28 @@ const caps = { mcp: null, sample: null, db: null, user: null };
 const flight = new Map();
 // On claude.ai only the artifact's owner may approve or ship. A local HTML file is only opened by its owner.
 const isOwner = () => (caps.user ? (caps.user.isOwner?.() ?? false) : !window.claude);
+// PRs already handed to Claude (Ship it or Ship all) leave Ready to ship and show under In flight. A stopped
+// request, or a Ship all result of skipped/failed, brings its PR back. Requests older than today's data are
+// ignored, because the morning read already reflects what merged.
+let shipKeys = new Set();
+function refreshShipKeys() {
+  const s = new Set(), gen = D?.generated ? new Date(D.generated) : null;
+  for (const a of flight.values()) {
+    if (a.status === "stopped") continue;
+    if (gen && a.requestedAt && new Date(a.requestedAt) <= gen) continue;
+    if (a.action === "ship-it" && a.repo && a.pr != null) s.add(`${a.repo}#${a.pr}`);
+    if (a.action === "ship-all" && Array.isArray(a.prs)) {
+      const res = Array.isArray(a.results) ? a.results : [];
+      for (const p of a.prs) {
+        const r = res.find((x) => x && x.repo === p.repo && Number(x.pr) === Number(p.pr));
+        if (r && (r.outcome === "skipped" || r.outcome === "failed")) continue;
+        s.add(`${p.repo}#${p.pr}`);
+      }
+    }
+  }
+  shipKeys = s;
+}
+const isShipping = (r, p) => shipKeys.has(`${r.fullName}#${p.number}`);
 
 // ---------- capabilities (light up when present) ----------
 const use = (n) => (window.claude?.use ? window.claude.use(n).catch(() => null) : Promise.resolve(null));
@@ -325,7 +347,7 @@ use("db").then((db) => {
     db.collection("actions").orderBy("requestedAt", "desc").limit(40).onSnapshot((snap) => {
       flight.clear();
       for (const d of snap.docs) flight.set(d.id, d.data());
-      renderFlight(); renderNav();
+      refreshShipKeys(); renderFlight(); if (D) { renderShip(); renderNeeds(); } renderNav();
     }, () => renderFlight("The action log couldn't be read just now."));
   } catch { renderFlight("The action log couldn't be read just now."); }
 });
@@ -363,7 +385,7 @@ function viewCount(k) {
   const rs = visible();
   switch (k) {
     case "needs": return rs.filter((r) => r.score >= 45).length;
-    case "ship": return rs.reduce((n, r) => n + r.humanPrs.length, 0);
+    case "ship": return rs.reduce((n, r) => n + r.humanPrs.filter((p) => !isShipping(r, p)).length, 0);
     case "patterns": return (D.patterns?.packages || []).length;
     case "bots": return rs.filter((r) => r.updaters?.tools.includes("dependabot")).length;
     case "goals": return (D.goals || []).length;
@@ -401,6 +423,7 @@ function render() {
   $("stamp").textContent = `as of ${gen.toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}`;
   $("stamp").classList.toggle("stale", hours > 30);
   if (hours > 30) $("stamp").textContent += " · stale";
+  refreshShipKeys();
   // An older engine doesn't write its version: say so rather than guess.
   $("versions").textContent = `plugin v${PLUGIN_VERSION} · engine ${D.engine ? `v${D.engine}` : "version not reported (update with /radar-update)"}`;
   renderFilters(); renderLegend(); renderVitals(); renderMoves(); drawRadar();
@@ -598,7 +621,7 @@ function primaryActions(r) {
   const a = [];
   if (r.alerts.critHigh || r.alerts.secrets.length) a.push(link(`${r.url}/security`, "Alerts ↗"));
   for (const f of r.failing.slice(0, 1)) a.push(handoffBtn(r, "fix-ci", `Fix ${f.name}`, { workflow: f.name }));
-  const green = r.humanPrs.find((p) => !p.draft && p.checks === "green");
+  const green = r.humanPrs.find((p) => !p.draft && p.checks === "green" && !isShipping(r, p));
   if (green) a.push(shipBtn(r, green));
   if (r.botPrs.renovate + r.botPrs.dependabot >= 3) a.push(handoffBtn(r, "fold-bot-prs", "Fold bot PRs"));
   a.push(h("button", { class: "btn", onclick: () => openRepo(r, true) }, "Ask Claude"));
@@ -656,8 +679,10 @@ const SHIP_COLS = [
 ];
 function renderShip() {
   const all = [];
-  for (const r of visible()) for (const p of r.humanPrs) all.push({ r, p });
-  if (!all.length) return $("ship").replaceChildren(h("div", { class: "empty" }, "No PRs from people in this view."));
+  let shipping = 0;
+  for (const r of visible()) for (const p of r.humanPrs) { if (isShipping(r, p)) shipping++; else all.push({ r, p }); }
+  const flightNote = shipping ? h("div", { class: "note", style: "margin:0 0 8px" }, `${shipping} ${shipping === 1 ? "PR is" : "PRs are"} on the way. `, h("button", { class: "btn ghost", style: "padding:2px 8px", onclick: () => showView("flight") }, "See In flight")) : "";
+  if (!all.length) return $("ship").replaceChildren(shipping ? h("div", { class: "empty" }, `Nothing left to ship here. ${shipping} ${shipping === 1 ? "PR is" : "PRs are"} on the way: `, h("button", { class: "btn ghost", style: "padding:2px 8px", onclick: () => showView("flight") }, "see In flight")) : h("div", { class: "empty" }, "No PRs from people in this view."));
   // Ties keep the oldest PR first, so the default (CI green first) matches what the page always showed.
   const rows = sortRows(all, SHIP_COLS, shipSort, (a, b) => new Date(a.p.created) - new Date(b.p.created) || a.r.name.localeCompare(b.r.name));
   const ready = rows.filter(({ p }) => isReady(p));
@@ -670,7 +695,7 @@ function renderShip() {
   const shipAllBtn = h("button", { class: "btn ship", disabled: !ready.length, title: ready.length ? null : "No PR in this view had green CI this morning" }, ready.length ? `Ship all (${ready.length})` : "Ship all");
   shipAllBtn.addEventListener("click", () => confirmShipAll(ready, rows.filter(({ p }) => !isReady(p))));
   const bar = h("div", { class: "tblbar" }, h("span", { class: "sub" }, `${ready.length} of ${rows.length} green · click a column to sort`), shipAllBtn);
-  $("ship").replaceChildren(bar, h("div", { class: "tbl" }, h("table", {}, h("thead", {}, sortHead(SHIP_COLS, shipSort, renderShip)), tb)));
+  $("ship").replaceChildren(bar, flightNote, h("div", { class: "tbl" }, h("table", {}, h("thead", {}, sortHead(SHIP_COLS, shipSort, renderShip)), tb)));
 }
 
 function renderPatterns() {
@@ -1080,6 +1105,7 @@ async function fire(req, btn, status) {
   try { await caps.db.collection("actions").doc(requestId).set(full); }
   catch { btn.disabled = false; status.className = "status err"; status.textContent = "Couldn't queue the request, so nothing was sent. Try again."; return; }
   await kick(btn, status);
+  if (req.action === "ship-it" || req.action === "ship-all") setTimeout(closeDrawer, 1500);
 }
 // HTML-file tier: no shared queue, so the button gives a command to paste into Claude Code instead.
 function offline(req, status) {
@@ -1127,7 +1153,7 @@ function openRepo(r, ask = false) {
     h("div", { class: "note mono" }, `${r.language || "–"} · last push ${ago(r.pushedAt)} · ${r.issues} open issues${r.release ? ` · latest ${r.release.tag}` : ""}`),
     r.alerts.packages.length ? [h("h4", {}, "Packages with critical/high alerts"), h("div", { class: "sig" }, r.alerts.packages.map((p) => pill(p, "var(--critical)")))] : "",
     r.failing.length ? [h("h4", {}, "Red on the default branch"), ...r.failing.map((f) => h("div", {}, h("a", { href: f.url, target: "_blank", rel: "noopener" }, f.name), h("span", { class: "muted" }, ` ${ago(f.at)}`)))] : "",
-    r.humanPrs.length ? [h("h4", {}, "People's PRs"), ...r.humanPrs.map((p) => h("div", { class: "prrow" }, h("div", { class: "tt" }, h("a", { href: p.url, target: "_blank", rel: "noopener" }, `#${p.number}`), ` ${p.title}`), h("div", { class: "acts" }, p.draft ? pill("draft", "var(--muted)") : checksPill(p.checks), !p.draft && p.checks === "green" ? shipBtn(r, p) : "")))] : "",
+    r.humanPrs.length ? [h("h4", {}, "People's PRs"), ...r.humanPrs.map((p) => h("div", { class: "prrow" }, h("div", { class: "tt" }, h("a", { href: p.url, target: "_blank", rel: "noopener" }, `#${p.number}`), ` ${p.title}`), h("div", { class: "acts" }, p.draft ? pill("draft", "var(--muted)") : checksPill(p.checks), isShipping(r, p) ? pill("shipping", "var(--good)") : !p.draft && p.checks === "green" ? shipBtn(r, p) : "")))] : "",
     h("h4", {}, "Hand off to Claude"),
     steward ? h("div", { class: "note" }, "Steward-managed: hand-offs stay off here; use /steward-maintain. Ship it works on green PRs.") : h("div", { class: "acts" }, acts),
     h("h4", {}, "Ask Claude"), caps.sample ? h("div", { class: "acts" }, askBtn) : h("div", { class: "note" }, "Ask Claude works when this dashboard is open on claude.ai. In Claude Code, ask the portfolio-analyst agent instead."), out,
