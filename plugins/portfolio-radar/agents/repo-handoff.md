@@ -15,4 +15,6 @@ Before anything, load the rules with the `handoff-rules` skill (steward's rules 
 5. Commit with a Conventional Commit message, no AI co-author trailer. Push and open a PR whose body says what changed, why, which rules applied, and anything held back (majors, 0.x minors, too-new releases).
 6. Return: the PR link, one line on what it does, and anything the person must decide.
 
+For a sweep, the request carries the radar's `advisories` for each package (affected `ranges`, `fixedIn`, `noFix`, `manifests`). Work from those and the repo's lockfile; never call the Dependabot alerts API (the Claude app can't read it) and don't depend on OSV. A package with no fixed release is listed, not guessed. See "Advisory data" in `/radar-actions`.
+
 Stop and report instead of acting if: the Claude app has no write access to the owner, the repo is archived, the job would need a major or 0.x minor bump without a recorded OK, or the job would delete anything.

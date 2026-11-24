@@ -26,7 +26,8 @@ The wizard takes about 20 minutes. It checks your machine and offers to install 
 | `/radar-report` | Today's top moves, in plain words |
 | `/radar-update` | Brings the newest engine into your copy as a pull request |
 | `/radar-dashboard` | Publishes or refreshes the dashboard: a private claude.ai artifact, or a single HTML file |
-| `/radar-actions` | Runs dashboard button requests: hand-offs, triage plans, approved steps, Ship it, Ship all, Sweep all |
+| `/radar-actions` | Runs dashboard button requests: hand-offs, triage plans, approved steps, Ship it, Ship all, Sweep all (5 repos per run, continuing on its own, working from the radar's advisory data) |
+| `/radar-coverage` | Turns on Dependabot alerts, secret scanning and CodeQL where the radar found them off, and sets Dependabot security updates to fit Renovate (off where Renovate runs). Runs with your own `gh` login after you say yes; private repos are left out of the paid features |
 | `/radar-triage` | Pulls every open loop into one de-duplicated action list, checked against GitHub now: PRs the hand-offs opened, stopped requests, decisions waiting on you, and (in a Claude project) radar threads left waiting. Then closes the old threads and duplicate PRs if you say yes |
 
 Skills: `system-detect`, `github-app-manifest`, `radar-config`, `handoff-rules`, `branch-cleanup`, `dashboard`, `triage-plan`, `radar-triage`. Agents: `radar-installer`, `repo-handoff`, `portfolio-analyst`. A session-start hook says one line if your radar needs attention, and stays quiet otherwise.

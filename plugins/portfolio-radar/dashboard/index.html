@@ -270,7 +270,7 @@ code{font:12.5px var(--f-mono);background:var(--bg);border:1px solid var(--line)
 "use strict";
 document.getElementById("js-note")?.remove();
 // Bumped with the plugin manifests; a test keeps them in step.
-const PLUGIN_VERSION = "0.13.1";
+const PLUGIN_VERSION = "0.14.0";
 // Per-person settings come from config.json next to data.json, written by /radar-dashboard. Nothing personal is in this file.
 const DEFAULTS = { ownerName: "you", triggerId: null, steward: false, stewardRepos: [], preferRenovate: false, radarRepo: "", runsWhere: "a new Claude Code task" };
 let CFG = { ...DEFAULTS };
@@ -775,7 +775,7 @@ function renderPatterns() {
   $("patterns").replaceChildren(bar, ...shown.map((p) => h("div", { class: "pat" },
     h("div", {}, h("div", { class: "pkg" }, p.pkg), h("div", { class: "sub muted", style: "font-size:12px" }, `${p.ecosystem} · worst ${p.worst}`)),
     h("div", {}, h("div", { class: "track" }, h("div", { class: "fill", style: `width:${p.repos.length / max * 100}%;background:${sevC[p.worst] || "var(--muted)"}` })), h("div", { class: "repos" }, `${p.repos.length} repos: ${p.repos.join(", ")}`)),
-    h("div", { class: "acts" }, handoffBtn({ fullName: p.repos[0], name: `${p.pkg} sweep` }, "sweep-package", "Sweep", { pkg: p.pkg, ecosystem: p.ecosystem, repos: p.repos.map(fullOf) })))),
+    h("div", { class: "acts" }, handoffBtn({ fullName: p.repos[0], name: `${p.pkg} sweep` }, "sweep-package", "Sweep", { pkg: p.pkg, ecosystem: p.ecosystem, repos: p.repos.map(fullOf), advisories: advisoriesFor([{ pkg: p.pkg, ecosystem: p.ecosystem, repos: p.repos.map(fullOf) }]) })))),
     pk.length > 10 ? h("button", { class: "btn more", onclick: () => { renderPatterns.all = !renderPatterns.all; renderPatterns(); } }, renderPatterns.all ? "Show fewer" : `Show all ${pk.length}`) : "");
 }
 const fullOf = (name) => (name.includes("/") ? name : `${D.owner}/${name}`);
@@ -986,16 +986,29 @@ function sweepTargets(sweeps) {
   for (const s of sweeps) for (const r of s.repos || []) { if (!by.has(r)) by.set(r, []); by.get(r).push(s.pkg); }
   return [...by.entries()];
 }
+// The radar's advisory detail (affected range, first fixed version, manifest) for each repo and package being swept,
+// so the session that opens the PRs doesn't have to read alerts itself. Engine 0.7.0+; older data sends none.
+function advisoriesFor(sweeps) {
+  const out = {};
+  for (const s of sweeps) for (const repo of s.repos || []) {
+    const r = byName(repo);
+    const adv = (r?.alerts?.advisories || []).find((x) => x.pkg === s.pkg && (!s.ecosystem || x.ecosystem === s.ecosystem));
+    if (adv) (out[repo] ||= []).push(adv);
+  }
+  return out;
+}
 function sweepAllBlock(a) {
   const res = Array.isArray(a.results) ? a.results : [];
   const waiting = a.status === "done" || a.status === "stopped" ? "not reported" : a.status === "running" ? "in progress" : "waiting";
-  return h("ul", { class: "shipres" }, sweepTargets(a.sweeps).map(([repo, pkgs]) => {
+  const targets = sweepTargets(a.sweeps), doneN = targets.filter(([repo]) => res.some((x) => x && x.repo === repo)).length;
+  const head = h("div", { class: "sub" }, `${doneN} of ${targets.length} repos done`, a.runs ? ` · run ${a.runs}${a.maxRuns ? ` of up to ${a.maxRuns}` : ""}` : "");
+  return h("div", {}, head, h("ul", { class: "shipres" }, targets.map(([repo, pkgs]) => {
     const r = res.find((x) => x && x.repo === repo);
     const out = r?.outcome && SWEEP_C[r.outcome] ? r.outcome : null;
     return h("li", {}, pill(out ? SWEEP_L[out] : waiting, out ? SWEEP_C[out] : "var(--muted)"),
       /^https:\/\//.test(r?.url || "") ? h("a", { href: r.url, target: "_blank", rel: "noopener" }, shortRepo(repo)) : h("span", {}, shortRepo(repo)),
       h("span", { class: "sub" }, pkgs.join(", ")), r?.why ? h("span", { class: "sub" }, `· ${r.why}`) : "");
-  }));
+  })));
 }
 function noteBlock(t) {
   const short = t.slice(0, 200).replace(/\s+\S*$/, "") + "…";
@@ -1069,9 +1082,35 @@ async function approveSteps(id, a, idxs, btn, status) {
   } catch { btn.disabled = false; status.className = "status err"; status.textContent = "Couldn't queue every step. Anything already queued shows above; try the rest again."; return; }
   await kick(btn, status);
 }
+// Security features GitHub says are off (engine 0.7.0+), with the command that turns each on for exactly those repos.
+// Changing repo settings needs admin rights that the radar and the dashboard's hand-offs don't hold, so you run them.
+const COVER = [
+  ["dependabot", "Dependabot alerts", "Free on every repo.", (rs) => rs, (r) => `gh api -X PUT repos/${r}/vulnerability-alerts`],
+  ["secretScanning", "Secret scanning", "Free on public repos, with push protection. Private repos need GitHub Secret Protection.", (rs) => rs.filter((x) => !x.private), (r) => `gh api -X PATCH repos/${r} -f "security_and_analysis[secret_scanning][status]=enabled" -f "security_and_analysis[secret_scanning_push_protection][status]=enabled"`],
+  ["codeScanning", "Code scanning", "Free CodeQL default setup on public repos; it runs in Actions on each push and PR. Private repos need GitHub Code Security.", (rs) => rs.filter((x) => !x.private), (r) => `gh api -X PATCH repos/${r}/code-scanning/default-setup -f state=configured`],
+];
+function coverageBlock() {
+  const c = D.coverage;
+  if (!c) return "";
+  const cards = COVER.map(([k, label, note, pick, cmd]) => {
+    const all = Array.isArray(c[k]) ? c[k] : [];
+    if (!all.length) return null;
+    const can = pick(all), pub = all.filter((x) => !x.private).length;
+    const script = can.map((x) => cmd(x.repo)).join("\n");
+    return h("div", { class: "card", style: "--c:var(--warn)" },
+      h("div", { class: "head" }, h("b", { style: "font:600 15px var(--f-display)" }, `${label} off in ${all.length}`), pill(`${pub} public · ${all.length - pub} private`, "var(--muted)")),
+      h("div", { class: "note" }, note),
+      can.length ? h("div", { class: "acts" }, h("button", { class: "btn", onclick: (e) => copy(script, e.currentTarget) }, `Copy the command to turn on ${can.length}`)) : h("div", { class: "note" }, "None of these can be turned on for free."),
+      h("details", { class: "fnote" }, h("summary", {}, `Repos (${all.length})`), h("p", {}, all.map((x) => x.repo).join(", "))));
+  }).filter(Boolean);
+  if (!cards.length) return "";
+  return h("div", { style: "margin-bottom:16px" }, h("div", { class: "grid wide" }, cards),
+    h("div", { class: "acts" }, h("button", { class: "btn primary", onclick: (e) => copy("/radar-coverage", e.currentTarget) }, "Copy /radar-coverage"), h("span", { class: "note" }, "Turns all of these on in one go from Claude Code on your machine, after a plan you approve, and sets Dependabot security updates off where Renovate runs.")),
+    h("p", { class: "note" }, "Or run the copied commands wherever gh is signed in as an admin of those repos. Repo settings need admin rights, which the radar and the dashboard's hand-offs never hold, so this runs with your own login."));
+}
 function renderGaps() {
   const w = D.warnings || [];
-  $("gaps").replaceChildren(w.length ? h("ul", { style: "margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px" }, w.map((x) => h("li", {}, x))) : h("div", { class: "empty" }, "Everything was readable today."));
+  $("gaps").replaceChildren(coverageBlock(), w.length ? h("ul", { style: "margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px" }, w.map((x) => h("li", {}, x))) : h("div", { class: "empty" }, "Everything was readable today."));
 }
 
 // ---------- actions ----------
@@ -1138,8 +1177,8 @@ function confirmShipAll(ready, notReady) {
     owner ? "" : h("div", { class: "status err" }, "Only the dashboard's owner can ship."),
     h("div", { class: "acts" }, go, h("button", { class: "btn ghost", onclick: closeDrawer }, "Cancel")), status));
 }
-// Sweep all: one request listing every package in view and its repos. Claude works repo by repo, so each
-// repo gets one PR that clears all of its listed packages, after checking the alerts are still open.
+// Sweep all: one request listing every package in view and its repos, with the radar's advisory data for each.
+// Claude works repo by repo, 5 per run, and continues on its own, so each repo gets one PR for all its packages.
 function confirmSweepAll(pk) {
   if (!pk.length) return;
   const status = h("div", { class: "status" });
@@ -1149,15 +1188,15 @@ function confirmSweepAll(pk) {
   const targets = sweepTargets(sweeps);
   const n = sweeps.length, m = targets.length;
   const go = h("button", { class: "btn primary", disabled: !owner || !m }, `Sweep ${m} ${m === 1 ? "repo" : "repos"}`);
-  go.addEventListener("click", () => fire({ action: "sweep-all", repo: null, sweeps, label: `Sweep all (${n} ${n === 1 ? "package" : "packages"}, ${m} repos)` }, go, status));
+  go.addEventListener("click", () => fire({ action: "sweep-all", repo: null, sweeps, advisories: advisoriesFor(sweeps), batch: 5, maxRuns: 6, runs: 0, continueTrigger: CFG.triggerId, label: `Sweep all (${n} ${n === 1 ? "package" : "packages"}, ${m} repos)` }, go, status));
   drawer(h("div", { class: "confirm" }, h("div", { class: "eyebrow" }, "Sweep all"), h("h3", {}, `Sweep ${n} ${n === 1 ? "package" : "packages"} across ${m} ${m === 1 ? "repo" : "repos"}?`),
     h("ol", { class: "shiplist", "aria-label": "Repos to sweep" }, targets.map(([repo, pkgs]) => h("li", {}, h("b", { class: "nowrap" }, shortRepo(repo)), h("span", { class: "tt" }, pkgs.join(", "))))),
     h("ul", {},
       h("li", {}, "One PR per repo that clears all of that repo's listed packages, so PRs don't fight over the same lockfile"),
-      h("li", {}, "Before each repo, Claude checks the alerts are still open and that no open PR already covers them; if so it links that PR or says it's already fixed"),
+      h("li", {}, "Claude works from this morning's advisory data (affected versions, first fixed release) and checks each repo's lockfile, so it doesn't need to read alerts itself; if an open PR already covers a repo, it links that PR, and a repo no longer affected shows as already fixed"),
       h("li", {}, "Same rules as Sweep: releases at least 3 days old, majors and 0.x minors deferred and listed"),
       h("li", {}, "Opens PRs and stops. Nothing merges; ship them from Ready to ship when they're green"),
-      h("li", {}, "Runs as one long task. Each repo's result shows under In flight as it goes")),
+      h("li", {}, "Up to 5 repos per run; if repos are left, it starts the next run itself (up to 6 runs). A repo it can't handle gets its own skipped or failed line and the rest carry on. In flight shows each result and how many are done")),
     held.length ? h("div", { class: "note" }, `Left out: ${held.join(", ")}, which ${held.length === 1 ? "runs" : "run"} under /steward-maintain.`) : "",
     owner ? "" : h("div", { class: "status err" }, "Only the dashboard's owner can sweep everything at once."),
     h("div", { class: "acts" }, go, h("button", { class: "btn ghost", onclick: closeDrawer }, "Cancel")), status));

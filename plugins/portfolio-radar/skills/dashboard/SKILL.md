@@ -70,4 +70,4 @@ To refresh, publish again to the same URL with the new `data.json`. Never change
 
 ## Rules for the buttons
 
-Every hand-off follows the `handoff-rules` skill: open a PR and stop. Only Ship it and Ship all merge, only for the owner, only if the head is unchanged and every check is green now. Sweep all is a hand-off (one PR per repo, never merges). Ship all and Sweep all each list everything in a confirmation first and report each item's result under In flight.
+Every hand-off follows the `handoff-rules` skill: open a PR and stop. Only Ship it and Ship all merge, only for the owner, only if the head is unchanged and every check is green now. Sweep all is a hand-off (one PR per repo, never merges); it sends the radar's advisory data with the request, takes 5 repos per run and starts the next run itself until every repo has a result. Couldn't check shows security features that are switched off apart from real read failures, with copy buttons for the commands and for `/radar-coverage`, which turns them on with the person's own `gh` login. Ship all and Sweep all each list everything in a confirmation first and report each item's result under In flight.
