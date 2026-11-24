@@ -270,7 +270,7 @@ code{font:12.5px var(--f-mono);background:var(--bg);border:1px solid var(--line)
 "use strict";
 document.getElementById("js-note")?.remove();
 // Bumped with the plugin manifests; a test keeps them in step.
-const PLUGIN_VERSION = "0.13.0";
+const PLUGIN_VERSION = "0.13.1";
 // Per-person settings come from config.json next to data.json, written by /radar-dashboard. Nothing personal is in this file.
 const DEFAULTS = { ownerName: "you", triggerId: null, steward: false, stewardRepos: [], preferRenovate: false, radarRepo: "", runsWhere: "a new Claude Code task" };
 let CFG = { ...DEFAULTS };
@@ -523,7 +523,10 @@ function renderTrends() {
   const weekly = Array.isArray(D.weekly) ? D.weekly : null;
   if (weekly) {
     const full = weekly.filter((w) => !w.partial), cur = weekly.find((w) => w.partial);
+    // A card whose count couldn't be read in any week says nothing, so it's left out and named in one note instead.
+    const unread = [];
     const flow = (f, label, up, color) => {
+      if (!weekly.some((w) => w[f] != null)) return unread.push(label);
       const last = full.at(-1), before = full.at(-2);
       cards.push(trendCard({ label, now: last?.[f] ?? null, vals: full.map((w) => w[f]), prevV: before?.[f] ?? null, up, color, sub: cur && cur[f] != null ? `${fmt(cur[f])} so far this week` : "this week so far: ?" }));
     };
@@ -531,7 +534,9 @@ function renderTrends() {
     flow("botPrsMerged", "Bot PRs merged", true, "var(--drift)");
     flow("issuesClosed", "Issues closed", true, "var(--ok)");
     flow("issuesOpened", "Issues opened", null, "var(--prs)");
-  } else cards.push(h("p", { class: "note trends-note" }, "Weekly flow (PRs merged, issues closed and opened) appears after the first radar run on engine 0.6.0 or later."));
+    if (unread.length) cards.push(h("p", { class: "note trends-note" }, `${unread.join(", ")}: not readable in any week, so not shown. `, h("button", { class: "btn ghost", style: "padding:2px 8px", onclick: () => showView("gaps") }, "See Couldn't check")));
+  } else if (verAtLeast(D.engine, "0.6.1")) cards.push(h("p", { class: "note trends-note" }, "Weekly flow isn't counted: no owner could be read. ", h("button", { class: "btn ghost", style: "padding:2px 8px", onclick: () => showView("gaps") }, "See Couldn't check")));
+  else cards.push(h("p", { class: "note trends-note" }, "Weekly flow (PRs merged, issues closed and opened) appears after the first radar run on engine 0.6.0 or later."));
   const hist = D.history || [], T = D.totals || {}, n = T.repos || 0;
   const pct = (v) => (n ? Math.round((v / n) * 100) : null);
   const health = (f, label, up, color, opts = {}) => {
