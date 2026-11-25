@@ -176,12 +176,16 @@ test("Ship it repairs a conflict once and asks for a fresh ship it on the new he
   assert.ok(html.includes("headSha: headOf(r, p)"), "Ship it and Ship all must send the new head");
 });
 
-test("the Overview shows week-over-week flow and health cards between vitals and Today's moves", () => {
+test("the Overview shows week-over-week flow and health cards under the vitals, grouped in rows", () => {
   const html = readFileSync(`${P}/dashboard/index.html`, "utf8");
-  const v = html.indexOf('id="vitals"'), t = html.indexOf('id="trends"'), m = html.indexOf('id="moves"');
-  assert.ok(v > 0 && t > v && m > t, "trends sit between vitals and moves");
+  const v = html.indexOf('id="vitals"'), t = html.indexOf('id="trends"');
+  assert.ok(v > 0 && t > v, "trends sit under the vitals");
+  assert.ok(!html.includes('id="moves"') && !html.includes("renderMoves();"), "Today's moves is gone from the Overview");
+  assert.match(html, /rowOf\(\["PRs merged", "Bot PRs merged", "People's PRs waiting"\]\)/, "PR cards share one row");
+  assert.match(html, /rowOf\(\["Issues closed", "Issues opened"\]\)/, "issue cards share one row");
+  assert.match(html, /if \(k === "failing" && !filtered\) return failingCard\(\)/, "the red CI vital is the weekly card");
   for (const f of ["prsMerged", "botPrsMerged", "issuesClosed", "issuesOpened"]) assert.ok(html.includes(`flow("${f}"`), `flow card for ${f}`);
-  for (const f of ["critHigh", "failingPct", "humanPrs", "stale", "renovatePct", "agentsPct"]) assert.ok(html.includes(`health("${f}"`), `health card for ${f}`);
+  for (const f of ["humanPrs", "stale", "renovatePct", "agentsPct"]) assert.ok(html.includes(`health("${f}"`), `health card for ${f}`);
   assert.match(html, /now == null \? "\?"/, "an unknown value shows ? and never 0");
   assert.match(html, /engine 0\.6\.0/, "says what to do when the engine has no weekly series yet");
 });

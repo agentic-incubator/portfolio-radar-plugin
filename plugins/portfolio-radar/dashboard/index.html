@@ -63,7 +63,7 @@ button{font:inherit;color:inherit}
 .vital .l{font-size:12px;color:var(--muted)}
 .vital .d{font:11px var(--f-mono);color:var(--dim)}
 .vital svg{display:block;width:100%;height:26px;margin-top:4px}
-.trends{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.trends{display:flex;flex-direction:column;gap:8px}.trendrow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}@media (max-width:520px){.trendrow{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .trend{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;min-width:0}
 .trend .v{font:700 22px/1.1 var(--f-display);letter-spacing:.02em;font-variant-numeric:tabular-nums}
 .trend .l{font-size:12px;color:var(--muted)}
@@ -242,8 +242,6 @@ code{font:12.5px var(--f-mono);background:var(--bg);border:1px solid var(--line)
       <div class="vitals" id="vitals"></div>
       <div><div class="eyebrow" id="trends-eyebrow">Week over week · all owners</div></div>
       <div class="trends" id="trends"></div>
-      <div><div class="eyebrow">Today's moves</div></div>
-      <div class="moves" id="moves"></div>
     </div>
   </div>
 
@@ -270,7 +268,7 @@ code{font:12.5px var(--f-mono);background:var(--bg);border:1px solid var(--line)
 "use strict";
 document.getElementById("js-note")?.remove();
 // Bumped with the plugin manifests; a test keeps them in step.
-const PLUGIN_VERSION = "0.14.0";
+const PLUGIN_VERSION = "0.15.0";
 // Per-person settings come from config.json next to data.json, written by /radar-dashboard. Nothing personal is in this file.
 const DEFAULTS = { ownerName: "you", triggerId: null, steward: false, stewardRepos: [], preferRenovate: false, radarRepo: "", runsWhere: "a new Claude Code task" };
 let CFG = { ...DEFAULTS };
@@ -437,7 +435,7 @@ function render() {
   refreshShipKeys();
   // An older engine doesn't write its version: say so rather than guess.
   $("versions").textContent = `plugin v${PLUGIN_VERSION} · engine ${D.engine ? `v${D.engine}` : "version not reported (update with /radar-update)"}`;
-  renderFilters(); renderLegend(); renderVitals(); renderTrends(); renderMoves(); drawRadar();
+  renderFilters(); renderLegend(); renderVitals(); renderTrends(); drawRadar();
   renderNeeds(); renderShip(); renderPatterns(); renderBots(); renderGoals(); renderClients(); renderNoise(); renderDrift(); renderMetrics(); renderFlight(); renderGaps(); renderNav();
 }
 
@@ -480,6 +478,12 @@ function viewTotals(rs) {
     secrets: sum((r) => r.alerts.secrets.length), noise: noiseInView().length,
   };
 }
+function failingCard() {
+  const hist = D.history || [], T = D.totals || {};
+  const pc = (t) => (t && t.repos && t.failing != null ? Math.round((t.failing / t.repos) * 100) : null);
+  const vals = weeklySamples(hist.map((x) => ({ date: x.date, p: pc(x) })), "p"), now = pc(T);
+  return trendCard({ label: "Repos with red CI", now, vals: [...vals.slice(0, -1), ...(now != null ? [now] : [])], prevV: vals.length > 1 ? vals.at(-2) : null, up: false, color: "var(--ci)", fmtV: (v) => `${v}%`, sub: "share of active repos" });
+}
 function renderVitals() {
   const filtered = filter !== "all" || !!query;
   const all = D.totals, t = filtered ? viewTotals(visible()) : all;
@@ -494,6 +498,7 @@ function renderVitals() {
     ["noise", "Noisy archived / forks", "var(--drift)", "see Noise"],
   ];
   $("vitals").replaceChildren(...items.map(([k, label, c, sub]) => {
+    if (k === "failing" && !filtered) return failingCard();
     const delta = prev && prev[k] != null ? t[k] - prev[k] : null;
     if (filtered) sub = `of ${fmt(all[k])} across all owners`;
     return h("div", { class: "vital" }, h("div", { class: "v", style: `color:${t[k] ? c : "var(--fg)"}` }, fmt(t[k])), h("div", { class: "l" }, label),
@@ -516,7 +521,7 @@ function trendCard({ label, now, fmtV = (n) => fmt(n), vals, prevV, up, sub, col
   const delta = now != null && prevV != null ? now - prevV : null;
   const good = delta == null || delta === 0 || up == null ? "" : (delta > 0) === up ? "good" : "bad";
   const dText = delta == null ? (sub || "no earlier week yet") : `${delta > 0 ? "▲" : delta < 0 ? "▼" : "="} ${fmtV(Math.abs(delta))} vs last week`;
-  return h("div", { class: "trend", title: sub || null }, h("div", { class: "v", style: now ? `color:${color}` : null }, now == null ? "?" : fmtV(now)), h("div", { class: "l" }, label), h("div", { class: `d ${good}` }, dText), spark(vals.filter((v) => v != null), color));
+  return h("div", { class: "trend", "data-l": label, title: sub || null }, h("div", { class: "v", style: now ? `color:${color}` : null }, now == null ? "?" : fmtV(now)), h("div", { class: "l" }, label), h("div", { class: `d ${good}` }, dText), spark(vals.filter((v) => v != null), color));
 }
 function renderTrends() {
   const root = $("trends"), cards = [];
@@ -545,13 +550,15 @@ function renderTrends() {
     const vals = weeklySamples(rows, f), now = T[opts.of || f] == null ? null : conv(T[opts.of || f], T);
     cards.push(trendCard({ label, now, vals: [...vals.slice(0, -1), ...(now != null ? [now] : [])], prevV: vals.length > 1 ? vals.at(-2) : null, up, color, fmtV: opts.fmtV, sub: opts.sub }));
   };
-  health("critHigh", "Critical / high alerts", false, "var(--critical)");
-  health("failingPct", "Repos with red CI", false, "var(--ci)", { of: "failing", conv: (v, t) => (t.repos ? Math.round((v / t.repos) * 100) : null), fmtV: (v) => `${v}%`, sub: "share of active repos" });
   health("humanPrs", "People's PRs waiting", false, "var(--prs)", { sub: T.prAgeMedian != null ? `median age ${T.prAgeMedian} days` : "none open" });
   health("stale", "Repos quiet 90+ days", false, "var(--stale)");
   health("renovatePct", "On Renovate only", true, "var(--ok)", { of: "renovateOnly", conv: (v, t) => (t.repos ? Math.round((v / t.repos) * 100) : null), fmtV: (v) => `${v}%`, sub: "no Dependabot update PRs" });
   health("agentsPct", "Have AGENTS.md", true, "var(--ok)", { of: "noAgents", conv: (v, t) => (t.repos ? Math.round(((t.repos - v) / t.repos) * 100) : null), fmtV: (v) => `${v}%`, sub: "share of active repos" });
-  root.replaceChildren(...cards);
+  const used = new Set();
+  const rowOf = (ls) => { const els = ls.map((l) => cards.find((c) => c.dataset?.l === l)).filter(Boolean); els.forEach((e) => used.add(e)); return els.length ? h("div", { class: "trendrow" }, els) : null; };
+  const r1 = rowOf(["PRs merged", "Bot PRs merged", "People's PRs waiting"]), r2 = rowOf(["Issues closed", "Issues opened"]);
+  const rest = cards.filter((c) => !used.has(c));
+  root.replaceChildren(...[r1, r2, rest.length ? h("div", { class: "trendrow" }, rest) : null].filter(Boolean));
 }
 
 function renderMoves() {
