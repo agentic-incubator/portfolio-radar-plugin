@@ -275,9 +275,9 @@ code{font:12.5px var(--f-mono);background:var(--bg);border:1px solid var(--line)
 "use strict";
 document.getElementById("js-note")?.remove();
 // Bumped with the plugin manifests; a test keeps them in step.
-const PLUGIN_VERSION = "0.16.0";
+const PLUGIN_VERSION = "0.17.0";
 // Per-person settings come from config.json next to data.json, written by /radar-dashboard. Nothing personal is in this file.
-const DEFAULTS = { ownerName: "you", triggerId: null, steward: false, stewardRepos: [], preferRenovate: false, radarRepo: "", runsWhere: "a new Claude Code task" };
+const DEFAULTS = { ownerName: "you", triggerId: null, dataFile: "", steward: false, stewardRepos: [], preferRenovate: false, radarRepo: "", runsWhere: "a new Claude Code task" };
 let CFG = { ...DEFAULTS };
 const STEWARD = { includes: (n) => CFG.stewardRepos.includes(n) };
 const LEVELS = {
@@ -372,11 +372,43 @@ use("db").then((db) => {
 // A built single-file dashboard (HTML tier) carries its data inline; the artifact fetches its files.
 const inline = (id) => { try { const el = document.getElementById(id); return el ? JSON.parse(el.textContent) : null; } catch { return null; } };
 const inlineCfg = inline("radar-config"), inlineData = inline("radar-data");
-(inlineCfg ? Promise.resolve(inlineCfg) : fetch("config.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : {})).catch(() => ({})))
+const cfgReady = (inlineCfg ? Promise.resolve(inlineCfg) : fetch("config.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : {})).catch(() => ({})))
   .then((c) => { CFG = { ...DEFAULTS, ...c }; render(); });
-(inlineData ? Promise.resolve(inlineData) : fetch("data.json", { cache: "no-store" }).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }))
+const dataReady = (inlineData ? Promise.resolve(inlineData) : fetch("data.json", { cache: "no-store" }).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }))
   .then((d) => { D = d; render(); })
-  .catch(() => { $("stamp").textContent = "No data yet"; $("needs").replaceChildren(h("div", { class: "empty" }, "Today's radar data isn't here yet. It arrives after the radar's daily run.")); });
+  .catch(() => { if (D) return; $("stamp").textContent = "No data yet"; $("needs").replaceChildren(h("div", { class: "empty" }, "Today's radar data isn't here yet. It arrives after the radar's daily run.")); });
+
+// ---------- fresher data from the project's files (optional) ----------
+// With dataFile in config.json and the files capability declared, the page reads the radar's data from the
+// Claude Code project's files, as the viewer, and uses it when it is newer than the data.json published with
+// the page. The morning task then only copies the file into the project folder and publishes nothing.
+// If the read fails, the page keeps the published copy and says why on the timestamp (it never hides a gap).
+let dataNote = "";
+const parseData = (bytes) => {
+  try { const d = JSON.parse(new TextDecoder().decode(bytes)); return d && d.schema === 1 && !Number.isNaN(Date.parse(d.generated)) ? d : null; }
+  catch { return null; }
+};
+async function loadProjectData() {
+  const path = typeof CFG.dataFile === "string" ? CFG.dataFile.replace(/^\/+/, "") : "";
+  if (!path || inlineData) return;
+  const files = await use("files");
+  if (!files) { dataNote = `Couldn't read ${path} from the project's files here; showing the copy published with the page.`; return render(); }
+  let res = null, code = "";
+  for (let tries = 0; tries < 2 && !res; tries++) {
+    try { res = await files.read(path); }
+    catch (e) {
+      code = e?.code || "unavailable";
+      if (code === "not_granted" || code === "bad_request") break;
+      await new Promise((ok) => setTimeout(ok, e?.retryAfterMs || 3000));
+    }
+  }
+  const d = res && parseData(res.bytes);
+  if (!d) { dataNote = res ? `${path} in the project's files isn't valid radar data; showing the copy published with the page.` : `Couldn't read ${path} from the project's files (${code}); showing the copy published with the page.`; return render(); }
+  dataNote = "";
+  if (!D || new Date(d.generated) > new Date(D.generated)) D = d;
+  render();
+}
+Promise.allSettled([cfgReady, dataReady]).then(loadProjectData);
 
 const visible = () => (D?.repos || []).filter((r) => {
   if (query && !r.name.toLowerCase().includes(query)) return false;
@@ -439,6 +471,8 @@ function render() {
   $("stamp").textContent = `as of ${gen.toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}`;
   $("stamp").classList.toggle("stale", hours > 30);
   if (hours > 30) $("stamp").textContent += " · stale";
+  if (dataNote) $("stamp").textContent += " · published copy";
+  $("stamp").title = dataNote;
   refreshShipKeys();
   // An older engine doesn't write its version: say so rather than guess.
   $("versions").textContent = `plugin v${PLUGIN_VERSION} · engine ${D.engine ? `v${D.engine}` : "version not reported (update with /radar-update)"}`;
