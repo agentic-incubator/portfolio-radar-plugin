@@ -217,7 +217,7 @@ test("Sweep all asks first, lists each repo, and never merges", () => {
   assert.match(html, /"conflicts-resolved": "conflicts resolved"/, "the dashboard labels the sweep outcome");
 });
 
-test("Ready to ship counts only green PRs and groups the rest by CI", () => {
+test("Ready to ship counts only green PRs and the rest have their own Act now tabs", () => {
   const html = readFileSync(`${P}/dashboard/index.html`, "utf8");
   assert.match(html, /case "ship": return rs\.reduce\(\(n, r\) => n \+ r\.humanPrs\.filter\(\(p\) => isReady\(p\) && !isShipping/, "the tab counts only green PRs");
   const grp = html.slice(html.indexOf("const shipGroup"), html.indexOf("const CI_ORDER"));
@@ -239,4 +239,17 @@ test("the page reads fresher data from the project's files only when dataFile is
   assert.match(html, /\$\("stamp"\)\.title = dataNote/, "the reason shows on the timestamp");
   const skill = readFileSync(`${P}/skills/dashboard/SKILL.md`, "utf8");
   assert.match(skill, /`dataFile`/, "the skill documents dataFile");
+});
+
+test("Fix first, Review by hand and Drafts are Act now tabs with counts, not groups inside Ready to ship", () => {
+  const html = readFileSync(`${P}/dashboard/index.html`, "utf8");
+  const act = html.slice(html.indexOf('["Act now"'), html.indexOf('["Clean up in bulk"'));
+  for (const [k, l] of [["fix", "Fix first"], ["review", "Review by hand"], ["drafts", "Drafts"]]) {
+    assert.ok(act.includes(`["${k}", "${l}"`), `Act now should have a ${l} tab`);
+    assert.ok(html.includes(`<section id="s-${k}">`) && html.includes(`<div id="${k}">`), `${l} needs its own section`);
+  }
+  assert.match(html, /case "fix": case "review": case "drafts": return prsIn\(rs, PR_TAB\[k\]\);/, "each tab shows its count");
+  const ship = html.slice(html.indexOf("function renderShip"), html.indexOf("function renderPrTab"));
+  assert.match(ship, /SHIP_GROUPS\.filter\(\(\[k\]\) => k === "ready" \|\| k === "running"\)/, "Ready to ship shows only green and CI running");
+  assert.ok(!/<details class="shipgrp"|"details", \{ class: "shipgrp" \}/.test(ship), "drafts no longer sit inside Ready to ship");
 });
