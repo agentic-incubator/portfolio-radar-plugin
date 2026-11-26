@@ -160,7 +160,7 @@ test("a PR handed to Ship it or Ship all leaves Ready to ship until its request 
   for (const k of ['"stopped"', '"ship-it"', '"ship-all"', '"skipped"', '"failed"']) assert.ok(fn.includes(k), `refreshShipKeys should consider ${k}`);
   const ship = html.slice(html.indexOf("function renderShip"), html.indexOf("function renderPatterns"));
   assert.match(ship, /isShipping\(r, p\)/, "renderShip should skip PRs already shipping");
-  assert.match(html, /case "ship": return rs\.reduce\(\(n, r\) => n \+ r\.humanPrs\.filter\(\(p\) => !isShipping/, "the tab count should skip them too");
+  assert.match(html, /case "ship": return rs\.reduce\(\(n, r\) => n \+ r\.humanPrs\.filter\(\(p\) => isReady\(p\) && !isShipping/, "the tab count should skip them too");
 });
 
 test("Ship it repairs a conflict once and asks for a fresh ship it on the new head", () => {
@@ -215,4 +215,15 @@ test("Sweep all asks first, lists each repo, and never merges", () => {
   assert.match(sweep, /conflicts-resolved/, "Sweep all repairs a conflicting PR that already covers a repo");
   assert.match(doc.slice(doc.indexOf("## Each request"), doc.indexOf("## Conflict repair")), /sweep-package[\s\S]{0,400}Conflict repair/, "one-package Sweep repairs too");
   assert.match(html, /"conflicts-resolved": "conflicts resolved"/, "the dashboard labels the sweep outcome");
+});
+
+test("Ready to ship counts only green PRs and groups the rest by CI", () => {
+  const html = readFileSync(`${P}/dashboard/index.html`, "utf8");
+  assert.match(html, /case "ship": return rs\.reduce\(\(n, r\) => n \+ r\.humanPrs\.filter\(\(p\) => isReady\(p\) && !isShipping/, "the tab counts only green PRs");
+  const grp = html.slice(html.indexOf("const shipGroup"), html.indexOf("const CI_ORDER"));
+  for (const k of ['"ready"', '"fix"', '"running"', '"review"', '"draft"']) assert.ok(grp.includes(k), `Ready to ship should have a ${k} group`);
+  for (const l of ["Ready to ship", "Fix first", "Review by hand", "Drafts"]) assert.ok(grp.includes(`"${l}"`), `missing group heading ${l}`);
+  // Only a green, non-draft PR gets a Ship it button; every other group links to the PR instead.
+  const table = html.slice(html.indexOf("function shipTable"), html.indexOf("function renderShip"));
+  assert.match(table, /isReady\(p\) \? shipBtn\(r, p\) : link\(p\.url, "Review ↗"\)/);
 });
