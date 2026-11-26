@@ -176,6 +176,13 @@ td .since{display:block;color:var(--muted);font-size:11px}
 tr:last-child td{border-bottom:0}
 .tblbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;margin-bottom:8px}
 .tblbar .sub{color:var(--muted);font-size:12px}
+.shipgrp{margin-top:18px}
+.shipgrp h3{display:flex;align-items:center;gap:8px;font:600 15px var(--f-display);letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px}
+.shipgrp>.note{margin:0 0 8px}
+details.shipgrp>summary{cursor:pointer;list-style:none}
+details.shipgrp>summary::-webkit-details-marker{display:none}
+details.shipgrp>summary h3::after{content:"Show";font:500 12px var(--f-body);letter-spacing:0;text-transform:none;color:var(--accent)}
+details.shipgrp[open]>summary h3::after{content:"Hide"}
 .shiplist{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;max-height:340px;overflow:auto;padding-right:4px}
 .shiplist li{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;min-width:0}
 .shiplist .tt{flex:1 1 220px;min-width:0;color:var(--fg)}
@@ -246,7 +253,7 @@ code{font:12.5px var(--f-mono);background:var(--bg);border:1px solid var(--line)
   </div>
 
   <section id="s-needs"><div class="sh"><h2>Needs you</h2><p>Ranked: exposed secrets, critical and high alerts, red CI, then people's PRs.</p></div><div class="grid" id="needs"></div><div class="more" id="needs-more"></div></section>
-  <section id="s-ship"><div class="sh"><h2>Ready to ship</h2><p>People's PRs and their CI. Ship it squash-merges a green PR and deletes its branch. Once handed off, a PR leaves this list and shows under In flight.</p></div><div id="ship"></div></section>
+  <section id="s-ship"><div class="sh"><h2>Ready to ship</h2><p>People's PRs, grouped by this morning's CI. Only green ones are ready to ship; red ones need a fix first, and ones with no CI need your review. Once handed off, a PR leaves this list and shows under In flight.</p></div><div id="ship"></div></section>
   <section id="s-patterns"><div class="sh"><h2>One fix, many repos</h2><p>The same vulnerable package in several repos. One sweep clears them all.</p></div><div id="patterns"></div></section>
   <section id="s-bots"><div class="sh"><h2>Dependency bots</h2><p id="bots-sub">Which repos get dependency updates from Renovate, Dependabot, both or neither.</p></div><div id="bots"></div></section>
   <section id="s-goals"><div class="sh"><h2>Goals</h2><p>Repos tied to what you're working toward.</p></div><div class="grid" id="goals"></div></section>
@@ -268,7 +275,7 @@ code{font:12.5px var(--f-mono);background:var(--bg);border:1px solid var(--line)
 "use strict";
 document.getElementById("js-note")?.remove();
 // Bumped with the plugin manifests; a test keeps them in step.
-const PLUGIN_VERSION = "0.15.0";
+const PLUGIN_VERSION = "0.16.0";
 // Per-person settings come from config.json next to data.json, written by /radar-dashboard. Nothing personal is in this file.
 const DEFAULTS = { ownerName: "you", triggerId: null, steward: false, stewardRepos: [], preferRenovate: false, radarRepo: "", runsWhere: "a new Claude Code task" };
 let CFG = { ...DEFAULTS };
@@ -394,7 +401,7 @@ function viewCount(k) {
   const rs = visible();
   switch (k) {
     case "needs": return rs.filter((r) => r.score >= 45).length;
-    case "ship": return rs.reduce((n, r) => n + r.humanPrs.filter((p) => !isShipping(r, p)).length, 0);
+    case "ship": return rs.reduce((n, r) => n + r.humanPrs.filter((p) => isReady(p) && !isShipping(r, p)).length, 0);
     case "patterns": return (D.patterns?.packages || []).length;
     case "bots": return rs.filter((r) => r.updaters?.tools.includes("dependabot")).length;
     case "goals": return (D.goals || []).length;
@@ -738,9 +745,20 @@ function sortHead(cols, st, rerender) {
 }
 
 // ---------- ready to ship ----------
+// People's PRs, grouped by this morning's CI. Only a green PR is ready to ship, so only those count on the tab
+// and in Ship all. A red PR needs a fix first; a PR with no CI runs (or CI that couldn't be read) needs a review
+// by hand; drafts sit collapsed at the end. Every group's table sorts the same way.
 const isReady = (p) => !p.draft && p.checks === "green";
+const shipGroup = (p) => (p.draft ? "draft" : p.checks === "green" ? "ready" : p.checks === "red" ? "fix" : p.checks === "pending" ? "running" : "review");
+const SHIP_GROUPS = [
+  ["ready", "Ready to ship", "var(--ok)", "CI green this morning. Ship it checks CI again, squash-merges and deletes the branch."],
+  ["fix", "Fix first", "var(--bad)", "CI red on the PR. It isn't ready until the checks pass."],
+  ["running", "CI running", "var(--warn)", "Checks hadn't finished at this morning's read."],
+  ["review", "Review by hand", "var(--muted)", "No CI runs on the PR, or CI that couldn't be read. Nothing checks these for you, so review and merge them yourself."],
+  ["draft", "Drafts", "var(--muted)", "Not ready for review yet."],
+];
 const CI_ORDER = { green: 0, pending: 1, red: 2, none: 3, unknown: 4 };
-const shipSort = sortState("ship", "ci", "asc");
+const shipSort = sortState("ship", "opened", "asc");
 const SHIP_COLS = [
   { k: "repo", label: "Repo", v: ({ r }) => r.name.toLowerCase() },
   { k: "pr", label: "PR", v: ({ p }) => (p.title || "").toLowerCase() },
@@ -748,25 +766,36 @@ const SHIP_COLS = [
   { k: "ci", label: "CI", v: ({ p }) => (p.draft ? 9 : CI_ORDER[p.checks] ?? 5) },
   { k: "act", label: "" },
 ];
+function shipTable(rows) {
+  return h("div", { class: "tbl" }, h("table", {}, h("thead", {}, sortHead(SHIP_COLS, shipSort, renderShip)), h("tbody", {}, rows.map(({ r, p }) => h("tr", {},
+    h("td", {}, h("button", { class: "repo-link", onclick: () => openRepo(r) }, r.name)),
+    h("td", {}, h("a", { href: p.url, target: "_blank", rel: "noopener" }, `#${p.number} `), p.title, h("div", { class: "sub" }, `${p.author}${p.draft ? " · draft" : ""}`, fixedHeads.has(`${r.fullName}#${p.number}`) ? [" · ", pill(`conflicts resolved · new head ${headOf(r, p).slice(0, 7)}`, "var(--accent)"), " check CI, then Ship it again"] : "")),
+    h("td", { class: "mono nowrap" }, ago(p.created)),
+    h("td", {}, p.draft ? pill("draft", "var(--muted)") : checksPill(p.checks)),
+    h("td", {}, isReady(p) ? shipBtn(r, p) : link(p.url, "Review ↗")))))));
+}
 function renderShip() {
   const all = [];
   let shipping = 0;
   for (const r of visible()) for (const p of r.humanPrs) { if (isShipping(r, p)) shipping++; else all.push({ r, p }); }
   const flightNote = shipping ? h("div", { class: "note", style: "margin:0 0 8px" }, `${shipping} ${shipping === 1 ? "PR is" : "PRs are"} on the way. `, h("button", { class: "btn ghost", style: "padding:2px 8px", onclick: () => showView("flight") }, "See In flight")) : "";
   if (!all.length) return $("ship").replaceChildren(shipping ? h("div", { class: "empty" }, `Nothing left to ship here. ${shipping} ${shipping === 1 ? "PR is" : "PRs are"} on the way: `, h("button", { class: "btn ghost", style: "padding:2px 8px", onclick: () => showView("flight") }, "see In flight")) : h("div", { class: "empty" }, "No PRs from people in this view."));
-  // Ties keep the oldest PR first, so the default (CI green first) matches what the page always showed.
+  // Ties keep the oldest PR first.
   const rows = sortRows(all, SHIP_COLS, shipSort, (a, b) => new Date(a.p.created) - new Date(b.p.created) || a.r.name.localeCompare(b.r.name));
   const ready = rows.filter(({ p }) => isReady(p));
-  const tb = h("tbody", {}, rows.map(({ r, p }) => h("tr", {},
-    h("td", {}, h("button", { class: "repo-link", onclick: () => openRepo(r) }, r.name)),
-    h("td", {}, h("a", { href: p.url, target: "_blank", rel: "noopener" }, `#${p.number} `), p.title, h("div", { class: "sub" }, `${p.author}${p.draft ? " · draft" : ""}`, fixedHeads.has(`${r.fullName}#${p.number}`) ? [" · ", pill(`conflicts resolved · new head ${headOf(r, p).slice(0, 7)}`, "var(--accent)"), " check CI, then Ship it again"] : "")),
-    h("td", { class: "mono nowrap" }, ago(p.created)),
-    h("td", {}, p.draft ? pill("draft", "var(--muted)") : checksPill(p.checks)),
-    h("td", {}, isReady(p) ? shipBtn(r, p) : link(p.url, "Review ↗")))));
   const shipAllBtn = h("button", { class: "btn ship", disabled: !ready.length, title: ready.length ? null : "No PR in this view had green CI this morning" }, ready.length ? `Ship all (${ready.length})` : "Ship all");
   shipAllBtn.addEventListener("click", () => confirmShipAll(ready, rows.filter(({ p }) => !isReady(p))));
-  const bar = h("div", { class: "tblbar" }, h("span", { class: "sub" }, `${ready.length} of ${rows.length} green · click a column to sort`), shipAllBtn);
-  $("ship").replaceChildren(bar, flightNote, h("div", { class: "tbl" }, h("table", {}, h("thead", {}, sortHead(SHIP_COLS, shipSort, renderShip)), tb)));
+  const counts = SHIP_GROUPS.map(([k, label]) => [label, rows.filter(({ p }) => shipGroup(p) === k).length]).filter(([, n]) => n);
+  const bar = h("div", { class: "tblbar" }, h("span", { class: "sub" }, `${counts.map(([l, n]) => `${n} ${l.toLowerCase()}`).join(" · ")} · click a column to sort`), shipAllBtn);
+  const groups = SHIP_GROUPS.map(([k, label, c, note]) => {
+    const gr = rows.filter(({ p }) => shipGroup(p) === k);
+    if (k === "ready" && !gr.length) return h("div", { class: "shipgrp" }, h("h3", {}, label, pill("0", c)), h("div", { class: "empty" }, "No PR in this view had green CI this morning."));
+    if (!gr.length) return "";
+    const head = [label, pill(String(gr.length), c)];
+    if (k === "draft") return h("details", { class: "shipgrp" }, h("summary", {}, h("h3", {}, head)), h("p", { class: "note" }, note), shipTable(gr));
+    return h("div", { class: "shipgrp" }, h("h3", {}, head), h("p", { class: "note" }, note), shipTable(gr));
+  });
+  $("ship").replaceChildren(bar, flightNote, ...groups);
 }
 
 function renderPatterns() {
