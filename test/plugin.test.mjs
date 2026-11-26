@@ -227,3 +227,16 @@ test("Ready to ship counts only green PRs and groups the rest by CI", () => {
   const table = html.slice(html.indexOf("function shipTable"), html.indexOf("function renderShip"));
   assert.match(table, /isReady\(p\) \? shipBtn\(r, p\) : link\(p\.url, "Review ↗"\)/);
 });
+
+test("the page reads fresher data from the project's files only when dataFile is set, and says when it can't", () => {
+  const html = readFileSync(`${P}/dashboard/index.html`, "utf8");
+  const block = html.slice(html.indexOf("async function loadProjectData"), html.indexOf("Promise.allSettled([cfgReady, dataReady])"));
+  assert.match(block, /if \(!path \|\| inlineData\) return;/, "no dataFile (or a built HTML file) means no project read");
+  assert.match(block, /use\("files"\)/, "it reads through the files capability");
+  assert.match(html, /d\.schema === 1/, "it checks the schema before using the data");
+  assert.match(block, /new Date\(d\.generated\) > new Date\(D\.generated\)/, "it only replaces the published copy with newer data");
+  assert.match(block, /showing the copy published with the page/, "a failed read is named, never hidden");
+  assert.match(html, /\$\("stamp"\)\.title = dataNote/, "the reason shows on the timestamp");
+  const skill = readFileSync(`${P}/skills/dashboard/SKILL.md`, "utf8");
+  assert.match(skill, /`dataFile`/, "the skill documents dataFile");
+});

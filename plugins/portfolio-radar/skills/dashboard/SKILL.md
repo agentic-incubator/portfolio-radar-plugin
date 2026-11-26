@@ -44,6 +44,7 @@ With engine 0.5.0 or later, each repo in `data.json` carries `metrics`, and the 
   "ownerName": "Sam",
   "radarRepo": "octo-user/portfolio-radar",
   "triggerId": null,
+  "dataFile": "",
   "steward": false,
   "stewardRepos": [],
   "preferRenovate": false,
@@ -53,18 +54,21 @@ With engine 0.5.0 or later, each repo in `data.json` carries `metrics`, and the 
 
 - `ownerName`: how Ask Claude refers to them. Their first name or "you".
 - `triggerId`: the actions task's id (Full tier only). Null elsewhere.
+- `dataFile`: artifact tiers in a Claude Code project only. The path, inside the project's files, of the radar data the page reads at open time (for example `radar/dashboard.json`). Empty means the page uses only its published `data.json`. See "Keeping it fresh".
 - `steward`, `stewardRepos`: from system detection. Steward's own repos (for example `<login>/workstation-steward`, `<login>/workstation-steward-config`) get Ship it only.
 - `preferRenovate`: from `handoff-rules.md`. When false, the "Move to Renovate" button is hidden.
 
 ## Artifact tier
 
-Load the `artifact-design` and `artifact-capabilities` skills first if you have them. Publish `index.html` as the page with `data.json` and `config.json` as files, private to the person, icon `radar`. Capabilities the page uses, each optional: a database (collection `actions`) for the button queue and In flight; the viewer's identity, so only the owner can approve or ship; asking Claude, for Ask Claude; and, Full tier only, calling the Claude Code Remote connector's `fire_trigger` with the `triggerId`. Grant only what the tier needs. Save the URL to state as `dashboardUrl`.
+Load the `artifact-design` and `artifact-capabilities` skills first if you have them. Publish `index.html` as the page with `data.json` and `config.json` as files, private to the person, icon `radar`. Capabilities the page uses, each optional: the project's files, for `dataFile` (see "Keeping it fresh"); a database (collection `actions`) for the button queue and In flight; the viewer's identity, so only the owner can approve or ship; asking Claude, for Ask Claude; and, Full tier only, calling the Claude Code Remote connector's `fire_trigger` with the `triggerId`. Grant only what the tier needs. Save the URL to state as `dashboardUrl`.
 
 To refresh, publish again to the same URL with the new `data.json`. Never change `index.html` from the plugin's copy except through a plugin update.
 
 ## Keeping it fresh
 
-- **Artifact tiers:** offer a daily scheduled task about an hour after the radar's run (the radar runs 11:23 UTC). Its job: fetch `data/dashboard.json` from the radar repo, check `generated` is under 30 hours old, and republish `data.json` to the artifact. If the data is stale, don't publish; the page turns its timestamp amber after 30 hours by itself.
+- **Artifact tiers in a Claude Code project (preferred):** the page reads its data from the project's files, so the morning task never republishes the artifact. Publish once with the `files` capability (`{files: {project: "<the project's id>"}}`) beside the others, and `dataFile` in `config.json`. Then offer a daily scheduled task about an hour after the radar's run (the radar runs 11:23 UTC). Its job: fetch `data/dashboard.json` from the radar repo, check it's valid JSON with `schema` 1 and `generated` under 30 hours old, and copy it to `dataFile` in the project folder. If the data is stale, don't copy. The page uses the project copy when it's newer than its published `data.json`, and if it can't read it, it shows the published copy with "published copy" on the timestamp and the reason in its tooltip.
+  Why: a cloud task that publishes data naming private repos is stopped by the auto mode safety check ("Sensitive Information Leakage") and waits for a tap every day, even though the artifact is private. Copying the file inside the person's own private project doesn't publish anything.
+- **Artifact tiers elsewhere:** the same daily task, but it republishes `data.json` to the artifact instead of copying it. Read the published `data.json` first (or name it in `overwrite_unread`), or the publish is refused. Expect the safety check above to ask for a tap when the data names private repos.
 - **Full tier:** also a second task, started by the buttons, whose prompt runs `/radar-actions` on the queue. Put its id in `config.json` as `triggerId` and republish.
 - **HTML tier:** re-run `/radar-dashboard html` to rebuild the file. Offer to do that as part of `/radar-report`.
 
