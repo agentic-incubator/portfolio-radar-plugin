@@ -253,7 +253,10 @@ code{font:12.5px var(--f-mono);background:var(--bg);border:1px solid var(--line)
   </div>
 
   <section id="s-needs"><div class="sh"><h2>Needs you</h2><p>Ranked: exposed secrets, critical and high alerts, red CI, then people's PRs.</p></div><div class="grid" id="needs"></div><div class="more" id="needs-more"></div></section>
-  <section id="s-ship"><div class="sh"><h2>Ready to ship</h2><p>People's PRs, grouped by this morning's CI. Only green ones are ready to ship; red ones need a fix first, and ones with no CI need your review. Once handed off, a PR leaves this list and shows under In flight.</p></div><div id="ship"></div></section>
+  <section id="s-ship"><div class="sh"><h2>Ready to ship</h2><p>People's PRs with green CI this morning, plus any whose checks were still running. Red ones are under Fix first, ones with no CI under Review by hand, and drafts under Drafts. Once handed off, a PR leaves this list and shows under In flight.</p></div><div id="ship"></div></section>
+  <section id="s-fix"><div class="sh"><h2>Fix first</h2><p>People's PRs with red CI this morning. They aren't ready until the checks pass.</p></div><div id="fix"></div></section>
+  <section id="s-review"><div class="sh"><h2>Review by hand</h2><p>People's PRs with no CI runs, or CI that couldn't be read. Nothing checks these for you, so review and merge them yourself.</p></div><div id="review"></div></section>
+  <section id="s-drafts"><div class="sh"><h2>Drafts</h2><p>People's draft PRs. Not ready for review yet.</p></div><div id="drafts"></div></section>
   <section id="s-patterns"><div class="sh"><h2>One fix, many repos</h2><p>The same vulnerable package in several repos. One sweep clears them all.</p></div><div id="patterns"></div></section>
   <section id="s-bots"><div class="sh"><h2>Dependency bots</h2><p id="bots-sub">Which repos get dependency updates from Renovate, Dependabot, both or neither.</p></div><div id="bots"></div></section>
   <section id="s-goals"><div class="sh"><h2>Goals</h2><p>Repos tied to what you're working toward.</p></div><div class="grid" id="goals"></div></section>
@@ -275,7 +278,7 @@ code{font:12.5px var(--f-mono);background:var(--bg);border:1px solid var(--line)
 "use strict";
 document.getElementById("js-note")?.remove();
 // Bumped with the plugin manifests; a test keeps them in step.
-const PLUGIN_VERSION = "0.17.0";
+const PLUGIN_VERSION = "0.18.0";
 // Per-person settings come from config.json next to data.json, written by /radar-dashboard. Nothing personal is in this file.
 const DEFAULTS = { ownerName: "you", triggerId: null, dataFile: "", steward: false, stewardRepos: [], preferRenovate: false, radarRepo: "", runsWhere: "a new Claude Code task" };
 let CFG = { ...DEFAULTS };
@@ -420,7 +423,7 @@ const visible = () => (D?.repos || []).filter((r) => {
 // ---------- section menu: one view at a time ----------
 const VIEW_GROUPS = [
   ["Start", [["overview", "Overview", null]]],
-  ["Act now", [["needs", "Needs you", "var(--critical)"], ["ship", "Ready to ship", "var(--ok)"], ["flight", "In flight", "var(--accent)"]]],
+  ["Act now", [["needs", "Needs you", "var(--critical)"], ["ship", "Ready to ship", "var(--ok)"], ["fix", "Fix first", "var(--bad)"], ["review", "Review by hand", "var(--muted)"], ["drafts", "Drafts", "var(--muted)"], ["flight", "In flight", "var(--accent)"]]],
   ["Clean up in bulk", [["patterns", "One fix, many repos", "var(--critical)"], ["bots", "Dependency bots", "var(--drift)"], ["noise", "Noise", "var(--drift)"]]],
   ["Keep an eye on", [["goals", "Goals", "var(--accent)"], ["clients", "Clients", "var(--accent)"], ["metrics", "Metrics", "var(--accent)"], ["drift", "Drift", "var(--muted)"]]],
   ["Today's read", [["gaps", "Couldn't check", "var(--warn)"]]],
@@ -434,6 +437,7 @@ function viewCount(k) {
   switch (k) {
     case "needs": return rs.filter((r) => r.score >= 45).length;
     case "ship": return rs.reduce((n, r) => n + r.humanPrs.filter((p) => isReady(p) && !isShipping(r, p)).length, 0);
+    case "fix": case "review": case "drafts": return prsIn(rs, PR_TAB[k]);
     case "patterns": return (D.patterns?.packages || []).length;
     case "bots": return rs.filter((r) => r.updaters?.tools.includes("dependabot")).length;
     case "goals": return (D.goals || []).length;
@@ -778,10 +782,10 @@ function sortHead(cols, st, rerender) {
   }));
 }
 
-// ---------- ready to ship ----------
-// People's PRs, grouped by this morning's CI. Only a green PR is ready to ship, so only those count on the tab
-// and in Ship all. A red PR needs a fix first; a PR with no CI runs (or CI that couldn't be read) needs a review
-// by hand; drafts sit collapsed at the end. Every group's table sorts the same way.
+// ---------- ready to ship, and the PR tabs beside it ----------
+// People's PRs, split by this morning's CI. Ready to ship holds the green ones (only those count on its tab and in
+// Ship all) and any whose checks were still running. Fix first (red CI), Review by hand (no CI runs, or CI that
+// couldn't be read) and Drafts each have their own tab under Act now. Every table sorts the same way.
 const isReady = (p) => !p.draft && p.checks === "green";
 const shipGroup = (p) => (p.draft ? "draft" : p.checks === "green" ? "ready" : p.checks === "red" ? "fix" : p.checks === "pending" ? "running" : "review");
 const SHIP_GROUPS = [
@@ -791,6 +795,10 @@ const SHIP_GROUPS = [
   ["review", "Review by hand", "var(--muted)", "No CI runs on the PR, or CI that couldn't be read. Nothing checks these for you, so review and merge them yourself."],
   ["draft", "Drafts", "var(--muted)", "Not ready for review yet."],
 ];
+// Which shipGroup each PR tab shows, and the line it shows when it's empty.
+const PR_TAB = { fix: "fix", review: "review", drafts: "draft" };
+const PR_TAB_EMPTY = { fix: "No PR in this view had red CI this morning.", review: "Every PR in this view has CI.", drafts: "No draft PRs in this view." };
+const prsIn = (rs, g) => rs.reduce((n, r) => n + r.humanPrs.filter((p) => shipGroup(p) === g && !isShipping(r, p)).length, 0);
 const CI_ORDER = { green: 0, pending: 1, red: 2, none: 3, unknown: 4 };
 const shipSort = sortState("ship", "opened", "asc");
 const SHIP_COLS = [
@@ -813,23 +821,28 @@ function renderShip() {
   let shipping = 0;
   for (const r of visible()) for (const p of r.humanPrs) { if (isShipping(r, p)) shipping++; else all.push({ r, p }); }
   const flightNote = shipping ? h("div", { class: "note", style: "margin:0 0 8px" }, `${shipping} ${shipping === 1 ? "PR is" : "PRs are"} on the way. `, h("button", { class: "btn ghost", style: "padding:2px 8px", onclick: () => showView("flight") }, "See In flight")) : "";
+  if (!all.length) { for (const k of Object.keys(PR_TAB)) renderPrTab(k, []); }
   if (!all.length) return $("ship").replaceChildren(shipping ? h("div", { class: "empty" }, `Nothing left to ship here. ${shipping} ${shipping === 1 ? "PR is" : "PRs are"} on the way: `, h("button", { class: "btn ghost", style: "padding:2px 8px", onclick: () => showView("flight") }, "see In flight")) : h("div", { class: "empty" }, "No PRs from people in this view."));
   // Ties keep the oldest PR first.
   const rows = sortRows(all, SHIP_COLS, shipSort, (a, b) => new Date(a.p.created) - new Date(b.p.created) || a.r.name.localeCompare(b.r.name));
   const ready = rows.filter(({ p }) => isReady(p));
   const shipAllBtn = h("button", { class: "btn ship", disabled: !ready.length, title: ready.length ? null : "No PR in this view had green CI this morning" }, ready.length ? `Ship all (${ready.length})` : "Ship all");
   shipAllBtn.addEventListener("click", () => confirmShipAll(ready, rows.filter(({ p }) => !isReady(p))));
-  const counts = SHIP_GROUPS.map(([k, label]) => [label, rows.filter(({ p }) => shipGroup(p) === k).length]).filter(([, n]) => n);
-  const bar = h("div", { class: "tblbar" }, h("span", { class: "sub" }, `${counts.map(([l, n]) => `${n} ${l.toLowerCase()}`).join(" · ")} · click a column to sort`), shipAllBtn);
-  const groups = SHIP_GROUPS.map(([k, label, c, note]) => {
+  const counts = SHIP_GROUPS.filter(([k]) => k === "ready" || k === "running").map(([k, label]) => [label, rows.filter(({ p }) => shipGroup(p) === k).length]).filter(([, n]) => n);
+  const bar = h("div", { class: "tblbar" }, h("span", { class: "sub" }, `${counts.length ? counts.map(([l, n]) => `${n} ${l.toLowerCase()}`).join(" · ") + " · " : ""}click a column to sort`), shipAllBtn);
+  const groups = SHIP_GROUPS.filter(([k]) => k === "ready" || k === "running").map(([k, label, c, note]) => {
     const gr = rows.filter(({ p }) => shipGroup(p) === k);
     if (k === "ready" && !gr.length) return h("div", { class: "shipgrp" }, h("h3", {}, label, pill("0", c)), h("div", { class: "empty" }, "No PR in this view had green CI this morning."));
     if (!gr.length) return "";
-    const head = [label, pill(String(gr.length), c)];
-    if (k === "draft") return h("details", { class: "shipgrp" }, h("summary", {}, h("h3", {}, head)), h("p", { class: "note" }, note), shipTable(gr));
-    return h("div", { class: "shipgrp" }, h("h3", {}, head), h("p", { class: "note" }, note), shipTable(gr));
+    return h("div", { class: "shipgrp" }, h("h3", {}, label, pill(String(gr.length), c)), h("p", { class: "note" }, note), shipTable(gr));
   });
   $("ship").replaceChildren(bar, flightNote, ...groups);
+  for (const k of Object.keys(PR_TAB)) renderPrTab(k, rows);
+}
+// One PR tab (Fix first, Review by hand or Drafts): just its own sortable table.
+function renderPrTab(k, rows) {
+  const gr = rows.filter(({ p }) => shipGroup(p) === PR_TAB[k]);
+  $(k).replaceChildren(...(gr.length ? [h("div", { class: "tblbar" }, h("span", { class: "sub" }, `${gr.length} ${gr.length === 1 ? "PR" : "PRs"} · click a column to sort`)), shipTable(gr)] : [h("div", { class: "empty" }, PR_TAB_EMPTY[k])]));
 }
 
 function renderPatterns() {
